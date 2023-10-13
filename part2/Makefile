@@ -18,3 +18,13 @@ clean:
 ultraclean:
 	rm -fr $(ALL) *.o *.ppm sub*.o* sub*.e* *.prv *.pcf *.row time-heat-omp*boada*.txt
 
+test_seidel_omp: 
+	@bash run_test.sh seidel_omp
+
+test_jacobi_omp: heat-omp 
+	@bash run_test.sh jacobi_omp
+
+test_jacobi_omp_512: heat-omp 
+	@bash run_test.sh jacobi_omp_512
+
+test: clean all test_seidel_omp test_jacobi_omp test_jacobi_omp_512
