@@ -14,6 +14,7 @@ double relax_jacobi (double *u, double *utmp, unsigned sizex, unsigned sizey)
     bx = sizex/nbx;
     nby = NB;
     by = sizey/nby;
+
     for (int ii=0; ii<nbx; ii++)
         for (int jj=0; jj<nby; jj++) 
             for (int i=1+ii*bx; i<=min((ii+1)*bx, sizex-2); i++) 

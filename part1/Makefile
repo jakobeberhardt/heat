@@ -1,7 +1,7 @@
 CC      =  gcc 
 OPT3 	= -O3
 OPTG0 	= -g -O0
-CFLAGS  = -Wall -std=c99
+CFLAGS  = -Wall -std=c99 -fopenmp
 LFLAGS  = -lm
 
 ALL	= heat
@@ -16,3 +16,10 @@ heat: heat.c solver.c misc.o
 clean:
 	rm -fr $(ALL) *.o *.ppm sub*.e* sub*.o* *.xdot *.prv *.pcf *.row 
 
+test_seidel: 
+	@bash run_test.sh seidel
+
+test_jacobi: 
+	@bash run_test.sh jacobi
+
+test: test_seidel test_jacobi
