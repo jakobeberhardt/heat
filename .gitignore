@@ -1,0 +1,4 @@
+heatequation.pdf
+**/*.ppm
+**/.o
+**/heat
