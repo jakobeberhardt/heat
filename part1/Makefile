@@ -14,12 +14,15 @@ heat: heat.c solver.c misc.o
 	$(CC) $(OPT3) $(CFLAGS) $+ $(LFLAGS) -o $@
 
 clean:
-	rm -fr $(ALL) *.o *.ppm sub*.e* sub*.o* *.xdot *.prv *.pcf *.row 
+	rm -fr $(ALL) *.o *.ppm sub*.e* sub*.o* *.xdot *.prv *.pcf *.row heat
 
 test_seidel: 
 	@bash run_test.sh seidel
 
-test_jacobi: 
+test_jacobi: heat
 	@bash run_test.sh jacobi
 
-test: test_seidel test_jacobi
+test_jacobi_512: heat
+	@bash run_test.sh jacobi_512
+
+test: test_seidel test_jacobi 

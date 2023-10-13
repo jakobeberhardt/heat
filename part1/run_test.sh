@@ -2,16 +2,20 @@
 
 algo=$1
 
+# if [ -n $OMP_NUM_THREADS ]; then 
+#     OMP_NUM_THREADS=16
+# fi
+
 # Set the Makefile path
 MAKEFILE="Makefile"
 
-make -s -f $MAKEFILE clean > /dev/null 2>&1
-make -s -f $MAKEFILE > /dev/null 2>&1
+make -s -f $MAKEFILE clean 
+make -s -f $MAKEFILE 
 
 # Run the program and measure execution time
 echo "Running ${algo}"
 start_time=$(date +%s.%N)
-./heat test_${algo}.dat > /dev/null
+./heat ./data_files/test_${algo}.dat > /dev/null
 end_time=$(date +%s.%N)
 elapsed_time=$(echo "$end_time - $start_time" | bc)
 
