@@ -15,6 +15,7 @@
 #include <math.h>
 #include <float.h>
 #include <sys/time.h>
+#include <omp.h>
 
 #include "heat.h"
 
@@ -47,6 +48,7 @@ int initialize( algoparam_t *param )
 	return 0;
     }
 
+    #pragma omp parallel for private(j, dist)
     for( i=0; i<param->numsrcs; i++ )
     {
 	/* top row */
@@ -57,7 +59,8 @@ int initialize( algoparam_t *param )
 			 pow(param->heatsrcs[i].posy, 2));
 	  
 	    if( dist <= param->heatsrcs[i].range )
-	    {
+	    #pragma omp critical
+        {
 		(param->u)[j] +=
 		    (param->heatsrcs[i].range-dist) /
 		    param->heatsrcs[i].range *
@@ -73,7 +76,8 @@ int initialize( algoparam_t *param )
 			 pow(1-param->heatsrcs[i].posy, 2));
 	  
 	    if( dist <= param->heatsrcs[i].range )
-	    {
+	    #pragma omp critical
+        {
 		(param->u)[(np-1)*np+j]+=
 		    (param->heatsrcs[i].range-dist) / 
 		    param->heatsrcs[i].range * 
@@ -89,7 +93,8 @@ int initialize( algoparam_t *param )
 			     param->heatsrcs[i].posy, 2)); 
 	  
 	    if( dist <= param->heatsrcs[i].range )
-	    {
+	    #pragma omp critical
+        {
 		(param->u)[ j*np ]+=
 		    (param->heatsrcs[i].range-dist) / 
 		    param->heatsrcs[i].range *
@@ -105,7 +110,8 @@ int initialize( algoparam_t *param )
 			     param->heatsrcs[i].posy, 2)); 
 	  
 	    if( dist <= param->heatsrcs[i].range )
-	    {
+	    #pragma omp critical
+        {
 		(param->u)[ j*np+(np-1) ]+=
 		    (param->heatsrcs[i].range-dist) /
 		    param->heatsrcs[i].range *
@@ -190,14 +196,18 @@ void write_image( FILE * f, double *u,
     max=-DBL_MAX;
 
     // find minimum and maximum 
+    // TODO: Split this into two tasks: Find min and find max -> Less fighting over critical region
+    #pragma omp parallel for collapse(2)
     for( i=0; i<sizey; i++ )
     {
 	for( j=0; j<sizex; j++ )
 	{
 	    if( u[i*sizex+j]>max )
-		max=u[i*sizex+j];
+		#pragma omp critical
+        max=u[i*sizex+j];
 	    if( u[i*sizex+j]<min )
-		min=u[i*sizex+j];
+		#pragma omp critical
+        min=u[i*sizex+j];
 	}
     }
   
