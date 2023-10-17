@@ -2,3 +2,5 @@ heatequation.pdf
 **/*.ppm
 **/.o
 **/heat
+**/heat-omp
+**/*.o
