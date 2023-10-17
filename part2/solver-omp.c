@@ -1,6 +1,6 @@
 #include "heat.h"
-
-#define NB 8
+#include <omp.h>
+#define NB 2
 
 #define min(a,b) ( ((a) < (b)) ? (a) : (b) )
 
