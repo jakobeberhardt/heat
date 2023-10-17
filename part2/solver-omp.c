@@ -3,6 +3,8 @@
 #define NB 8
 
 #define min(a,b) ( ((a) < (b)) ? (a) : (b) )
+#define max(a,b) ( ((a) > (b)) ? (a) : (b) )
+
 
 /*
  * Blocked Jacobi solver: one iteration step
@@ -83,28 +85,41 @@ double relax_redblack (double *u, unsigned sizex, unsigned sizey)
 /*
  * Blocked Gauss-Seidel solver: one iteration step
  */
-double relax_gauss (double *u, unsigned sizex, unsigned sizey)
-{
-    double unew, diff, sum=0.0;
+double relax_gauss(double *u, unsigned sizex, unsigned sizey) {
+    double unew, diff, sum = 0.0;
     int nbx, bx, nby, by;
 
     nbx = NB;
-    bx = sizex/nbx;
+    bx = sizex / nbx;
     nby = NB;
-    by = sizey/nby;
-    for (int ii=0; ii<nbx; ii++)
-        for (int jj=0; jj<nby; jj++) 
-            for (int i=1+ii*bx; i<=min((ii+1)*bx, sizex-2); i++) 
-                for (int j=1+jj*by; j<=min((jj+1)*by, sizey-2); j++) {
-	            unew= 0.25 * (    u[ i*sizey	+ (j-1) ]+  // left
-				      u[ i*sizey	+ (j+1) ]+  // right
-				      u[ (i-1)*sizey	+ j     ]+  // top
-				      u[ (i+1)*sizey	+ j     ]); // bottom
-	            diff = unew - u[i*sizey+ j];
-	            sum += diff * diff; 
-	            u[i*sizey+j]=unew;
-                }
+    by = sizey / nby;
 
-    return sum;
+    #pragma omp parallel
+    #pragma omp single
+    {
+        for (int ii = 0; ii < nbx; ii++) {
+            for (int jj = 0; jj < nby; jj++) {
+                #pragma omp task private(diff) depend(in: u[(ii-1)*sizex*by + jj*by], u[ii*sizey*by + (jj-1)*by]) depend(out: u[ii*sizex*by + jj*by])
+                {
+                    double local_sum = 0.0;
+                    for (int i = 1 + ii * bx; i <= min((ii + 1) * bx, sizex - 2); i++) {
+                        for (int j = 1 + jj * by; j <= min((jj + 1) * by, sizey - 2); j++) {
+                            unew = 0.25 * (u[i*sizey + (j-1)] +      // left
+                                           u[i*sizey + (j+1)] +      // right
+                                           u[(i-1)*sizey + j] +      // top
+                                           u[(i+1)*sizey + j]);     // bottom
+                            diff = unew - u[i*sizey + j];
+                            local_sum += diff * diff;
+                            u[i*sizey + j] = unew;
+                        }
+                    }
+                    #pragma omp atomic
+                    sum += local_sum;
+                }
+            }
+        }
+    }
+
+    return sum; 
 }
 
