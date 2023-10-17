@@ -1,5 +1,5 @@
 #include "heat.h"
-#include </opt/homebrew/opt/libomp/include/omp.h>
+#include <omp.h>
 
 #define NB 8
 
@@ -82,7 +82,7 @@ double relax_redblack (double *u, unsigned sizex, unsigned sizey)
 }
 
 /*
- * Blocked Gauss-Seidel solver: one iteration step
+ * Blocked Gauss-Seidel solver: one iteration step 
  */
     double relax_gauss (double *u, unsigned sizex, unsigned sizey)
 {
@@ -94,7 +94,6 @@ double relax_redblack (double *u, unsigned sizex, unsigned sizey)
     bx = sizex/nbx;
     nby = NB;
     by = sizey/nby;
-
     #pragma omp parallel 
     #pragma omp single
     
@@ -125,7 +124,10 @@ double relax_redblack (double *u, unsigned sizex, unsigned sizey)
     return sum;
 }
 
-    double relax_gauss_doacross (double *u, unsigned sizex, unsigned sizey)
+/*
+ * doacross Gauss-Seidel solver: one iteration step 
+ */
+double relax_gauss_doacross (double *u, unsigned sizex, unsigned sizey)
 {
     double unew, diff, sum=0.0;
     int nbx, bx, nby, by;
@@ -141,8 +143,7 @@ double relax_redblack (double *u, unsigned sizex, unsigned sizey)
     for (int ii=0; ii<nbx; ii++){
         for (int jj=0; jj<nby; jj++){
         #pragma omp ordered depend(sink:ii-1,jj) depend(sink:ii,jj-1)
-        //#pragma omp task private( diff) depend (in: u[ii * bx* sizey+(jj - 1) * by], u[(ii - 1) * bx* sizey+jj * by]) depend (out: u[ii*by*sizex+bx*jj]
-
+        #pragma omp ordered depend(source)
         {
         double local_sum=0;
 
@@ -157,7 +158,6 @@ double relax_redblack (double *u, unsigned sizex, unsigned sizey)
 	            u[i*sizey+j]=unew;
                 }
             }
-    
         #pragma omp atomic
         sum+= local_sum;
          }
