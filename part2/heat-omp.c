@@ -102,7 +102,7 @@ int main( int argc, char *argv[] )
 		    residual = relax_redblack(param.u, np, np);
 		    break;
 	    case 2: // GAUSS
-		    residual = relax_gauss_doacross(param.u, np, np);
+		    residual = relax_gauss(param.u, np, np);
 		    break;
         case 3: // GAUSS do across
 		    residual = relax_gauss_doacross(param.u, np, np);

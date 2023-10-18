@@ -132,13 +132,11 @@ double relax_gauss_doacross (double *u, unsigned sizex, unsigned sizey)
     double unew, diff, sum=0.0;
     int nbx, bx, nby, by;
     
-
     nbx = NB;
     bx = sizex/nbx;
     nby = NB;
     by = sizey/nby;
-//#pragma omp task private( diff) depend (in: u[ii * bx* sizey+(jj - 1) * by], u[(ii - 1) * bx* sizey+jj * by]) depend (out: u[ii*by*sizex+bx*jj]
-   
+  
     #pragma omp for ordered(2)
     for (int ii=0; ii<nbx; ii++){
         for (int jj=0; jj<nby; jj++){ 
@@ -168,10 +166,7 @@ double relax_gauss_doacross (double *u, unsigned sizex, unsigned sizey)
          #pragma omp ordered depend(source)
         }
     } 
-    
 
-
-            
     return sum;
 }
 

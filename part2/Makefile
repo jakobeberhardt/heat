@@ -1,7 +1,7 @@
-CC     =  clang
+CC     =  gcc 
 OPT3 	= -O3
-CFLAGS  = -I/opt/homebrew/opt/libomp/include -Xclang -fopenmp -Wall -std=c99
-LFLAGS  = -L/opt/homebrew/opt/libomp/lib -lomp
+CFLAGS  = -fopenmp -Wall -std=c99
+LFLAGS  = -lm 
 
 ALL	= heat-omp 
 all: $(ALL)
