@@ -1,12 +1,15 @@
 #include "heat.h"
+#include "mpi.h"
 
 #define min(a,b) ( ((a) < (b)) ? (a) : (b) )
 #define NB 8
+#define P 4
 /*
  * Blocked Jacobi solver: one iteration step
  */
 double relax_jacobi (double *u, double *utmp, unsigned sizex, unsigned sizey)
 {
+     
     double diff, sum=0.0;
     int nbx, bx, nby, by;
   
@@ -80,6 +83,7 @@ double relax_redblack (double *u, unsigned sizex, unsigned sizey)
 /*
  * Blocked Gauss-Seidel solver: one iteration step
  */
+
 double relax_gauss (double *u, unsigned sizex, unsigned sizey)
 {
     double unew, diff, sum=0.0;
