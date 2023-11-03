@@ -17,7 +17,7 @@ double relax_jacobi (double *u, double *utmp, unsigned sizex, unsigned sizey)
     bx = sizex/nbx;
     nby = NB;
     by = sizey/nby;
-    #pragma omp parallel for private(diff) reduction(+:sum)
+    #pragma omp parallel for collapse(2) private(diff) reduction(+:sum)
     for (int ii=0; ii<nbx; ii++)
         for (int jj=0; jj<nby; jj++) 
             for (int i=1+ii*bx; i<=min((ii+1)*bx, sizex-2); i++) 
@@ -89,17 +89,15 @@ double relax_redblack (double *u, unsigned sizex, unsigned sizey)
     double unew, diff, sum=0.0;
     int nbx, bx, nby, by;
     
-
     nbx = NB;
     bx = sizex/nbx;
     nby = NB;
     by = sizey/nby;
     #pragma omp parallel 
     #pragma omp single
-    
     for (int ii=0; ii<nbx; ii++){
         for (int jj=0; jj<nby; jj++){
-        #pragma omp task private( diff) depend (in: u[ii * bx* sizey+(jj - 1) * by], u[(ii - 1) * bx* sizey+jj * by]) depend (out: u[ii*by*sizex+bx*jj])
+        #pragma omp task private(diff, unew) depend (in: u[ii * bx* sizey+(jj - 1) * by], u[(ii - 1) * bx* sizey+jj * by]) depend (out: u[ii*by*sizex+bx*jj])
         {
         double local_sum=0;
 
