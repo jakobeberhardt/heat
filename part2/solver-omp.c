@@ -99,7 +99,7 @@ double relax_redblack (double *u, unsigned sizex, unsigned sizey)
     
     for (int ii=0; ii<nbx; ii++){
         for (int jj=0; jj<nby; jj++){
-        #pragma omp task private(diff) depend (in: u[ii * bx* sizey+(jj - 1) * by], u[(ii - 1) * bx* sizey+jj * by]) depend (out: u[ii*by*sizex+bx*jj])
+        #pragma omp task private(diff,unew) depend (in: u[ii * bx* sizey+(jj - 1) * by], u[(ii - 1) * bx* sizey+jj * by]) depend (out: u[ii*by*sizex+bx*jj])
         {
         double local_sum=0;
 
