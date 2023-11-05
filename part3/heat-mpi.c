@@ -99,7 +99,7 @@ void do_calculations_master_blocking(algoparam_t *param, int rows, int np, int r
 
         MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-
+        MPI_Barrier(MPI_COMM_WORLD);
         MPI_Recv(&param->u[(rows + 1) * np], np, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &statuses[0]);
 
         iter++;
@@ -147,6 +147,7 @@ void do_calculations_master_nonblocking(algoparam_t *param, int rows, int np, in
                 for (int i = 0; i < numprocs; i++) {
                     residual += relax_gauss(param->u, ghost_rows, np, numprocs, i);
                     MPI_Isend(&param->u[(rows * np) + (i * block_size + 1)], block_size, MPI_DOUBLE, rank + 1, send_tag, MPI_COMM_WORLD,&r_master[i]);
+                    MPI_Wait(&r_master[i],&statuses[i]);
                     
                 }
                 
@@ -203,11 +204,11 @@ void do_calculations_worker_nonblocking(double *u, double *uhelp, int rank, int 
                 residual = 0.0;
                 for (int i = 0; i < numprocs; i++) {
                     MPI_Irecv(&u[i * block_size + 1], block_size, MPI_DOUBLE, rank - 1, recv_tag, MPI_COMM_WORLD, &r_recv[i]);
-                    //MPI_Wait(&r_recv[i],&statuses[i]);
+                    MPI_Wait(&r_recv[i],&statuses[i]);
                     residual += relax_gauss(u, ghost_rows, np, numprocs, i);
                     if (rank != numprocs - 1) {
                         MPI_Isend(&u[(rows * np) + (i * block_size + 1)], block_size, MPI_DOUBLE, rank + 1, send_tag, MPI_COMM_WORLD,&r_send[i]);
-                        
+                        MPI_Wait(&r_send[i],&statuses[i]);
                     }
                 }
                 
