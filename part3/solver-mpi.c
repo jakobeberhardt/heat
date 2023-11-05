@@ -1,7 +1,11 @@
 #include "heat.h"
+#include "/opt/homebrew/Cellar/open-mpi/4.1.6/include/mpi.h"
 
 #define min(a,b) ( ((a) < (b)) ? (a) : (b) )
 #define NB 8
+
+
+
 /*
  * Blocked Jacobi solver: one iteration step
  */
@@ -81,10 +85,10 @@ double relax_redblack (double *u, unsigned sizex, unsigned sizey)
  * Blocked Gauss-Seidel solver: one iteration step
  */
 
-double relax_gauss (double *u, unsigned sizex, unsigned sizey)
+double relax_gauss (double *u, unsigned sizex, unsigned sizey,int numprocs, int iteration)
 {
     double unew, diff, sum=0.0;
-    int nbx, bx, nby, by, start,end,offset_start,offset_end;
+    int nbx, bx, nby, by, start,end;
 
     start=iteration;
     end=start+1;

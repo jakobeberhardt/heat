@@ -40,8 +40,6 @@ void exchange_boundaries_gauss(double *u, int np, int rows, int rank, int numpro
     int block_size = (np) / numprocs;
     int block_index = iteration * block_size + 1;
     MPI_Status status;
-    MPI_Request send[numprocs];
-    MPI_Request recv[numprocs];
 
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -146,7 +144,7 @@ void do_calculations_worker(double *u, double *uhelp, int rank, int numprocs, in
             residual = 0.0;
                 for (int i = 0; i < numprocs; i++) {
                     MPI_Irecv(&u[i*block_size+1], block_size, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, &r_recv[i]);
-                    MPI_Wait(&r_recv[i],&statuses[i]);
+                    //MPI_Wait(&r_recv[i],&statuses[i]);
                     residual += relax_gauss(u, ghost_rows, np, numprocs, i);
                     if (rank !=numprocs-1){
                     MPI_Isend(&u[(rows*np)+(i*block_size+1)], block_size, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD,&r_send[i]);  
@@ -175,7 +173,6 @@ void do_calculations_worker(double *u, double *uhelp, int rank, int numprocs, in
          // Max iteration reached? (no limit with maxiter=0)
         if (maxiter > 0 && iter >= maxiter) break;
     }
-    printf("%d", iter);
 }
 
 int main(int argc, char *argv[]) {
@@ -184,7 +181,7 @@ int main(int argc, char *argv[]) {
     char *resfilename;
     int myid, numprocs;
     MPI_Status status = {.MPI_SOURCE = 0, .MPI_TAG = 0, .MPI_ERROR = 0};
-    MPI_Request send = MPI_REQUEST_NULL, recv = MPI_REQUEST_NULL;
+
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
@@ -280,7 +277,7 @@ int main(int argc, char *argv[]) {
 
         fprintf(stdout, "Time: %04.3f ", runtime);
         fprintf(stdout, "(%3.3f GFlop => %6.2f MFlop/s)\n", flop / 1000000000.0, flop / runtime / 1000000);
-        fprintf(stdout, "Convergence to residual=%f: %d iterations\n", residual, iter);
+        //fprintf(stdout, "Convergence to residual=%f: %d iterations\n", residual, iter);
 
         // For plot...
         coarsen(param.u, np, np, param.uvis, param.visres + 2, param.visres + 2);
@@ -289,7 +286,7 @@ int main(int argc, char *argv[]) {
 
         finalize(&param);
 
-        fprintf(stdout, "Process %d finished computing with residual value = %f\n", myid, residual);
+        //fprintf(stdout, "Process %d finished computing with residual value = %f\n", myid, residual);
 
         MPI_Finalize();
 
