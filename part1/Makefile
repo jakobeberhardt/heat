@@ -1,7 +1,7 @@
 CC      =  gcc 
 OPT3 	= -O3
 OPTG0 	= -g -O0
-CFLAGS  = -Wall -std=c99 -fopenmp
+CFLAGS  = -Wall -std=c99 
 LFLAGS  = -lm
 
 ALL	= heat
