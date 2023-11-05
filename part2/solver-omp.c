@@ -135,10 +135,10 @@ double relax_gauss_doacross (double *u, unsigned sizex, unsigned sizey)
     nby = NB;
     by = sizey/nby;
   
-    #pragma omp for ordered(2)
+    #pragma omp parallel for private(diff, unew) ordered(2)
     for (int ii=0; ii<nbx; ii++){
         for (int jj=0; jj<nby; jj++){ 
-        #pragma omp ordered depend(sink:ii-1,jj) depend(sink:ii,jj-1)
+        #pragma omp ordered depend(sink:ii-1,jj) depend(sink:ii,jj-1) 
         {
         double local_sum=0;
 
@@ -156,8 +156,7 @@ double relax_gauss_doacross (double *u, unsigned sizex, unsigned sizey)
 	            u[i*sizey+j]=unew;
                 }
             }
-            
-        
+                    
         #pragma omp atomic
         sum+= local_sum;
          }
