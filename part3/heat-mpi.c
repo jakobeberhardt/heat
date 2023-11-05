@@ -1,7 +1,3 @@
-/*
- * Iterative solver for heat distribution
- */
-
 #include "/opt/homebrew/Cellar/open-mpi/4.1.6/include/mpi.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,7 +13,7 @@ void exchange_boundaries_jacobi(double *u, int np, int rows, int rank, int numpr
 
     // Send to the next rank your last row only if you are not the last process
     if (rank < numprocs - 1) {
-        MPI_Send(&u[(rows)*np], np, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD);
+        MPI_Send(&u[(rows) * np], np, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD);
     }
 
     // Receive from the previous member their last row only if you are not the first process
@@ -70,7 +66,7 @@ void do_calculations_master(algoparam_t *param, int rows, int np, int rank, int 
     unsigned iter = 0;
     int ghost_rows = rows + 2;
     int block_size = (np) / numprocs;
-    
+
     MPI_Status status;
     MPI_Request r_master[numprocs];
 
@@ -89,27 +85,27 @@ void do_calculations_master(algoparam_t *param, int rows, int np, int rank, int 
                 residual = relax_redblack(param->u, np, np);
                 break;
             case 2: // GAUSS
-            residual = 0.0;
+                residual = 0.0;
                 for (int i = 0; i < numprocs; i++) {
                     residual += relax_gauss(param->u, ghost_rows, np, numprocs, i);
-                    MPI_Isend(&param->u[(rows*np)+(i*block_size+1)], block_size, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD,&r_master[i]);
-                     } 
+                    MPI_Isend(&param->u[(rows * np) + (i * block_size + 1)], block_size, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD, &r_master[i]);
+                }
                 break;
         }
         MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        
+
         MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Recv(&param->u[(rows + 1) * np ], np, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &status);
+        MPI_Recv(&param->u[(rows + 1) * np], np, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &status);
 
         iter++;
 
         if (algorithm == 0) {
             MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-            exchange_boundaries_jacobi(param->u, np, rows, rank, numprocs);
+            exchange_boundaries_jacobi(param->u, np, rows,            rank, numprocs);
         }
 
         // Solution good enough?
-        if (global_residual < 0.00005) break;
+        if (global_residual < 0.00006) break;
 
         // Max iteration reached? (no limit with maxiter=0)
         if (param->maxiter > 0 && iter >= param->maxiter) break;
@@ -122,7 +118,7 @@ void do_calculations_worker(double *u, double *uhelp, int rank, int numprocs, in
     unsigned iter = 0;
     int ghost_rows = rows + 2;
     int block_size = (np) / numprocs;
-    MPI_Status statuses [numprocs];
+    MPI_Status statuses[numprocs];
     MPI_Request r_send[numprocs];
     MPI_Request r_recv[numprocs];
 
@@ -141,24 +137,22 @@ void do_calculations_worker(double *u, double *uhelp, int rank, int numprocs, in
                 residual = relax_redblack(u, np, np);
                 break;
             case 2: // GAUSS
-            residual = 0.0;
+                residual = 0.0;
                 for (int i = 0; i < numprocs; i++) {
-                    MPI_Irecv(&u[i*block_size+1], block_size, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, &r_recv[i]);
-                    //MPI_Wait(&r_recv[i],&statuses[i]);
+                    MPI_Irecv(&u[i * block_size + 1], block_size, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, &r_recv[i]);
                     residual += relax_gauss(u, ghost_rows, np, numprocs, i);
-                    if (rank !=numprocs-1){
-                    MPI_Isend(&u[(rows*np)+(i*block_size+1)], block_size, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD,&r_send[i]);  
-                    } 
+                    if (rank != numprocs - 1) {
+                        MPI_Isend(&u[(rows * np) + (i * block_size + 1)], block_size, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD, &r_send[i]);
+                    }
                 }
                 break;
         }
         MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Barrier(MPI_COMM_WORLD);
         MPI_Send(&u[np], np, MPI_DOUBLE, rank - 1, 1, MPI_COMM_WORLD);
-        if (rank !=numprocs-1){
-            MPI_Recv(&u[(rows + 1) * np ], np, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &statuses[0]);
+        if (rank != numprocs - 1) {
+            MPI_Recv(&u[(rows + 1) * np], np, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &statuses[0]);
         }
-
 
         if (algorithm == 0) {
             MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -168,9 +162,9 @@ void do_calculations_worker(double *u, double *uhelp, int rank, int numprocs, in
         iter++;
 
         // Solution good enough?
-        if (global_residual < 0.00005) break;
+        if (global_residual < 0.00006) break;
 
-         // Max iteration reached? (no limit with maxiter=0)
+        // Max iteration reached? (no limit with maxiter=0)
         if (maxiter > 0 && iter >= maxiter) break;
     }
 }
@@ -181,7 +175,6 @@ int main(int argc, char *argv[]) {
     char *resfilename;
     int myid, numprocs;
     MPI_Status status = {.MPI_SOURCE = 0, .MPI_TAG = 0, .MPI_ERROR = 0};
-
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
