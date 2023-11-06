@@ -18,7 +18,7 @@ double relax_jacobi (double *u, double *utmp, unsigned sizex, unsigned sizey)
     nby = NB;
     by = sizey/nby;
     int i, j;
-    #pragma omp parallel for collapse(2) private(diff, i, j) reduction(+:sum)
+    #pragma omp parallel for collapse(2) private(diff, i, j) reduction(+:sum) firstprivate(u)
     for (int ii=0; ii<nbx; ii++)
         for (int jj=0; jj<nby; jj++) 
             for (i=1+ii*bx; i<=min((ii+1)*bx, sizex-2); i++) 
