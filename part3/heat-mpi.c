@@ -66,11 +66,9 @@ void do_calculations_master_blocking(algoparam_t *param, int rows, int np, int r
     unsigned iter = 0;
     int ghost_rows = rows + 2;
     int block_size = (np) / numprocs;
-    int flag; // For MPI_Test
     int send_tag = rank * numprocs + (rank + 1);
 
     MPI_Status statuses [numprocs];
-    MPI_Request r_master[numprocs];
 
     while (1) {
         switch (algorithm) {
@@ -96,17 +94,15 @@ void do_calculations_master_blocking(algoparam_t *param, int rows, int np, int r
                 
                 break;
         }
-
-        MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-        MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Recv(&param->u[(rows + 1) * np], np, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &statuses[0]);
-
         iter++;
-
         if (algorithm == 0) {
             MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
             exchange_ghosts_jacobi(param->u, np, rows, rank, numprocs);
+        }
+         if (algorithm == 2){
+        MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Recv(&param->u[(rows + 1) * np], np, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &statuses[0]);
         }
 
         // Solution good enough?
@@ -116,13 +112,13 @@ void do_calculations_master_blocking(algoparam_t *param, int rows, int np, int r
         if (param->maxiter > 0 && iter >= param->maxiter) break;
     }
 }
+
 void do_calculations_master_nonblocking(algoparam_t *param, int rows, int np, int rank, int numprocs, int algorithm) {
     double residual = 0.0;
     double global_residual = 0.0;
     unsigned iter = 0;
     int ghost_rows = rows + 2;
     int block_size = (np) / numprocs;
-    int flag; // For MPI_Test
     int send_tag = rank * numprocs + (rank + 1);
 
     MPI_Status statuses [numprocs];
@@ -146,26 +142,23 @@ void do_calculations_master_nonblocking(algoparam_t *param, int rows, int np, in
                 residual = 0.0;
                 for (int i = 0; i < numprocs; i++) {
                     residual += relax_gauss(param->u, ghost_rows, np, numprocs, i);
+                    MPI_Barrier(MPI_COMM_WORLD);
                     MPI_Isend(&param->u[(rows * np) + (i * block_size + 1)], block_size, MPI_DOUBLE, rank + 1, send_tag, MPI_COMM_WORLD,&r_master[i]);
-                    MPI_Wait(&r_master[i],&statuses[i]);
-                    
+                    //MPI_Wait(&r_master[i],&statuses[i]);   
                 }
                 
                 break;
         }
-
-        MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-
-        MPI_Recv(&param->u[(rows + 1) * np], np, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &statuses[0]);
-
         iter++;
-
         if (algorithm == 0) {
             MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
             exchange_ghosts_jacobi(param->u, np, rows, rank, numprocs);
         }
-
+        if (algorithm == 2){
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Recv(&param->u[(rows + 1) * np], np, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &statuses[0]);
+        }
         // Solution good enough?
         if (global_residual < 0.00005) break;
 
@@ -183,6 +176,7 @@ void do_calculations_worker_nonblocking(double *u, double *uhelp, int rank, int 
     MPI_Status statuses[numprocs];
     MPI_Request r_send[numprocs];
     MPI_Request r_recv[numprocs];
+    int flag;
     int recv_tag = (rank - 1) * numprocs + rank;
     int send_tag = rank * numprocs + (rank + 1);
 
@@ -204,30 +198,33 @@ void do_calculations_worker_nonblocking(double *u, double *uhelp, int rank, int 
                 residual = 0.0;
                 for (int i = 0; i < numprocs; i++) {
                     MPI_Irecv(&u[i * block_size + 1], block_size, MPI_DOUBLE, rank - 1, recv_tag, MPI_COMM_WORLD, &r_recv[i]);
-                    MPI_Wait(&r_recv[i],&statuses[i]);
+                    //MPI_Wait(&r_recv[i],&statuses[i]);
+                    //MPI_Test(&r_recv[i],&flag,&statuses[i]);
+                    MPI_Barrier(MPI_COMM_WORLD);
                     residual += relax_gauss(u, ghost_rows, np, numprocs, i);
                     if (rank != numprocs - 1) {
                         MPI_Isend(&u[(rows * np) + (i * block_size + 1)], block_size, MPI_DOUBLE, rank + 1, send_tag, MPI_COMM_WORLD,&r_send[i]);
-                        MPI_Wait(&r_send[i],&statuses[i]);
+                        //MPI_Wait(&r_send[i],&statuses[i]);
                     }
+                    
                 }
                 
                 break;
-        }
-        MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-     
-        MPI_Send(&u[np], np, MPI_DOUBLE, rank - 1, 1, MPI_COMM_WORLD);
-        if (rank != numprocs - 1) {
-            MPI_Recv(&u[(rows + 1) * np], np, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &statuses[0]);
         }
 
         if (algorithm == 0) {
             MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
             exchange_ghosts_jacobi(u, np, rows, rank, numprocs);
         }
-
         iter++;
-
+        if (algorithm == 2){
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Send(&u[np], np, MPI_DOUBLE, rank - 1, 1, MPI_COMM_WORLD);
+        if (rank != numprocs - 1) {
+            MPI_Recv(&u[(rows + 1) * np], np, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &statuses[0]);
+        }
+        } 
         // Solution good enough?
         if (global_residual < 0.00005) break;
 
@@ -243,8 +240,6 @@ void do_calculations_worker_blocking(double *u, double *uhelp, int rank, int num
     int ghost_rows = rows + 2;
     int block_size = (np) / numprocs;
     MPI_Status statuses[numprocs];
-    MPI_Request r_send[numprocs];
-    MPI_Request r_recv[numprocs];
     int recv_tag = (rank - 1) * numprocs + rank;
     int send_tag = rank * numprocs + (rank + 1);
 
@@ -275,20 +270,19 @@ void do_calculations_worker_blocking(double *u, double *uhelp, int rank, int num
                 
                 break;
         }
+        iter++;
+        if (algorithm == 0) {
+            MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            exchange_ghosts_jacobi(u, np, rows, rank, numprocs);
+        }
+        if (algorithm == 2){
         MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Barrier(MPI_COMM_WORLD);
         MPI_Send(&u[np], np, MPI_DOUBLE, rank - 1, 1, MPI_COMM_WORLD);
         if (rank != numprocs - 1) {
             MPI_Recv(&u[(rows + 1) * np], np, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &statuses[0]);
         }
-
-        if (algorithm == 0) {
-            MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-            exchange_ghosts_jacobi(u, np, rows, rank, numprocs);
         }
-
-        iter++;
-
         // Solution good enough?
         if (global_residual < 0.00005) break;
 
@@ -439,8 +433,11 @@ int main(int argc, char *argv[]) {
         MPI_Recv(&uhelp[0], (rows + 2) * (np), MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &status);
 
         MPI_Barrier(MPI_COMM_WORLD);
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         do_calculations_worker_nonblocking(u, uhelp, myid, numprocs, rows, np, maxiter, algorithm);
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         MPI_Send(&u[np], (np) * (rows), MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
 
