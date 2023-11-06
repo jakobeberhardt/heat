@@ -127,10 +127,11 @@ int main( int argc, char *argv[] ) {
 
     // full size (param.resolution are only the inner points)
     np = param.resolution + 2;
-    int Grid_dim = 16;
-    int Block_Dim = np/16;
+    
 
-    int Grid_Dim, Block_Dim;	// Grid and Block structure values
+    int Grid_Dim, Block_Dim;
+    Grid_dim = 16;
+    Block_Dim = np/16;	// Grid and Block structure values
     if (strcmp(argv[2], "-t")==0) {
             Block_Dim = atoi(argv[3]);
             Grid_Dim = np/Block_Dim + ((np%Block_Dim)!=0);;
@@ -224,7 +225,8 @@ int main( int argc, char *argv[] ) {
 
     //COPYING INITIAL VALUES FROM HOST TO DEVICE
 
-    cudaMemcpy(dev_u, dev_uhelp, sizeof(double)*(np*np),cudaMemcpyHostToDevice);
+    cudaMemcpy(param.u, dev_u, sizeof(double)*(np*np),cudaMemcpyHostToDevice);
+    cudaMemcpy(param.uhelp, dev_uhelp, sizeof(double)*(np*np),cudaMemcpyHostToDevice);
 
     iter = 0;
     while(1) {
@@ -232,7 +234,8 @@ int main( int argc, char *argv[] ) {
         cudaDeviceSynchronize();  // Wait for compute device to finish.
 
     //COPY RESULTS FROM GPU TO CPU TO CALCULATE RESIDUAL
-    cudaMemcpy(dev_u, dev_uhelp, sizeof(double)*(np*np),cudaMemcpyDeviceToHost);
+    cudaMemcpy(dev_u, param.u, sizeof(double)*(np*np),cudaMemcpyDeviceToHost);
+    cudaMemcpy(dev_uhelp, param.uhelp, sizeof(double)*(np*np),cudaMemcpyDeviceToHost);
 	residual = cpu_residual (param.u, param.uhelp, np, np);
 
 	float * tmp = dev_u;
@@ -249,7 +252,8 @@ int main( int argc, char *argv[] ) {
     }
 
     // TODO: get result matrix from GPU
-    cudaMemcpy(dev_u,sizeof(double)*(np*np),cudaMemcpyDeviceToHost);
+    cudaMemcpy(dev_u, param.u, sizeof(double)*(np*np),cudaMemcpyDeviceToHost);
+    cudaMemcpy(dev_uhelp, param.uhelp, sizeof(double)*(np*np),cudaMemcpyDeviceToHost);
 
     // TODO: free memory used in GPU
     cudaFree(dev_u,dev_uhelp);
