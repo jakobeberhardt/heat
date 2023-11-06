@@ -93,7 +93,7 @@ double relax_gauss (double *u, unsigned sizex, unsigned sizey,int numprocs, int 
     start=iteration;
     end=start+1;
 
-    nbx = 1;
+    nbx = numprocs;
     bx = sizex/nbx;
     nby = numprocs;
     by = (sizey)/nby;
