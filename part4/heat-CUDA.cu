@@ -217,14 +217,14 @@ int main( int argc, char *argv[] ) {
 
     //CUDA MEMORY ALLOCATION
 
-    cudaMalloc((void**)&dev_u,sizeof(float)*(np*np));
-    cudaMalloc((void**)&dev_uhelp,sizeof(float)*(np*np));
+    cudaMalloc((void**)&dev_u, sizeof(float)*(np*np));
+    cudaMalloc((void**)&dev_uhelp, sizeof(float)*(np*np));
 
 
     //COPYING INITIAL VALUES FROM HOST TO DEVICE
 
-    cudaMemcpy(param.u, dev_u, sizeof(float)*(np*np),cudaMemcpyHostToDevice);
-    cudaMemcpy(param.uhelp, dev_uhelp, sizeof(float)*(np*np),cudaMemcpyHostToDevice);
+    cudaMemcpy(param->u, dev_u, sizeof(float)*(np*np),cudaMemcpyHostToDevice);
+    cudaMemcpy(param->uhelp, dev_uhelp, sizeof(float)*(np*np),cudaMemcpyHostToDevice);
 
     iter = 0;
     while(1) {
@@ -232,8 +232,8 @@ int main( int argc, char *argv[] ) {
         cudaDeviceSynchronize();  // Wait for compute device to finish.
 
     //COPY RESULTS FROM GPU TO CPU TO CALCULATE RESIDUAL
-    cudaMemcpy(dev_u, param.u, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
-    cudaMemcpy(dev_uhelp, param.uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
+    cudaMemcpy(dev_u, param->u, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
+    cudaMemcpy(dev_uhelp, param->uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
 	residual = cpu_residual (param.u, param.uhelp, np, np);
 
 	float * tmp = dev_u;
@@ -250,8 +250,8 @@ int main( int argc, char *argv[] ) {
     }
 
     // TODO: get result matrix from GPU
-    cudaMemcpy(dev_u, param.u, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
-    cudaMemcpy(dev_uhelp, param.uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
+    cudaMemcpy(dev_u, param->u, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
+    cudaMemcpy(dev_uhelp, param->uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
 
     // TODO: free memory used in GPU
     cudaFree(dev_u);
