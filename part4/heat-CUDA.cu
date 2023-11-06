@@ -41,7 +41,7 @@ __global__ void gpu_Heat (float *h, float *g, int N);
 #define NB 8
 #define min(a,b) ( ((a) < (b)) ? (a) : (b) )
 
-//float cpu_residual (float *u, float *utmp, unsigned sizex, unsigned sizey)
+float cpu_residual (float *u, float *utmp, unsigned sizex, unsigned sizey)
 {
     float diff, sum=0.0;
   
@@ -167,7 +167,7 @@ int main( int argc, char *argv[] ) {
     iter = 0;
     float residual;
     while(1) {
-	//residual = cpu_jacobi(param.u, param.uhelp, np, np);
+	residual = cpu_jacobi(param.u, param.uhelp, np, np);
 	float * tmp = param.u;
 	param.u = param.uhelp;
 	param.uhelp = tmp;
@@ -175,7 +175,7 @@ int main( int argc, char *argv[] ) {
         iter++;
 
         // solution good enough ?
-        //if (residual < 0.00005) break;
+        if (residual < 0.00005) break;
 
         // max. iteration reached ? (no limit with maxiter=0)
         if (iter>=param.maxiter) break;
@@ -234,7 +234,7 @@ int main( int argc, char *argv[] ) {
     //COPY RESULTS FROM GPU TO CPU TO CALCULATE RESIDUAL
     cudaMemcpy(param.u, dev_u, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
     cudaMemcpy(param.u, dev_uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
-	//residual = cpu_residual (param.u, param.uhelp, np, np);
+	residual = cpu_residual (param.u, param.uhelp, np, np);
 
 	float * tmp = dev_u;
 	dev_u = dev_uhelp;
@@ -243,7 +243,7 @@ int main( int argc, char *argv[] ) {
         iter++;
 
         // solution good enough ?
-        //if (residual < 0.00005) break;
+        if (residual < 0.00005) break;
 
         // max. iteration reached ? (no limit with maxiter=0)
         if (iter>=param.maxiter) break;
