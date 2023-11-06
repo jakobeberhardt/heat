@@ -130,7 +130,7 @@ int main( int argc, char *argv[] ) {
     
 
     int Grid_Dim, Block_Dim;
-    Grid_dim = 16;
+    Grid_Dim = 16;
     Block_Dim = np/16;	// Grid and Block structure values
     if (strcmp(argv[2], "-t")==0) {
             Block_Dim = atoi(argv[3]);
@@ -256,7 +256,8 @@ int main( int argc, char *argv[] ) {
     cudaMemcpy(dev_uhelp, param.uhelp, sizeof(double)*(np*np),cudaMemcpyDeviceToHost);
 
     // TODO: free memory used in GPU
-    cudaFree(dev_u,dev_uhelp);
+    cudaFree(dev_u);
+    cudaFree(dev_uhelp);
 
     cudaEventRecord( stop, 0 );     // instrument code to measue end time
     cudaEventSynchronize( stop );
