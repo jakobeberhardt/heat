@@ -129,9 +129,7 @@ int main( int argc, char *argv[] ) {
     np = param.resolution + 2;
     
 
-    int Grid_Dim, Block_Dim;
-    Grid_Dim = 16;
-    Block_Dim = np/16;	// Grid and Block structure values
+    int Grid_Dim, Block_Dim;	// Grid and Block structure values
     if (strcmp(argv[2], "-t")==0) {
             Block_Dim = atoi(argv[3]);
             Grid_Dim = np/Block_Dim + ((np%Block_Dim)!=0);;
@@ -219,14 +217,14 @@ int main( int argc, char *argv[] ) {
 
     //CUDA MEMORY ALLOCATION
 
-    cudaMalloc((void**)&dev_u,sizeof(double)*(np*np));
-    cudaMalloc((void**)&dev_uhelp,sizeof(double)*(np*np));
+    cudaMalloc((void**)&dev_u,sizeof(float)*(np*np));
+    cudaMalloc((void**)&dev_uhelp,sizeof(float)*(np*np));
 
 
     //COPYING INITIAL VALUES FROM HOST TO DEVICE
 
-    cudaMemcpy(param.u, dev_u, sizeof(double)*(np*np),cudaMemcpyHostToDevice);
-    cudaMemcpy(param.uhelp, dev_uhelp, sizeof(double)*(np*np),cudaMemcpyHostToDevice);
+    cudaMemcpy(param.u, dev_u, sizeof(float)*(np*np),cudaMemcpyHostToDevice);
+    cudaMemcpy(param.uhelp, dev_uhelp, sizeof(float)*(np*np),cudaMemcpyHostToDevice);
 
     iter = 0;
     while(1) {
@@ -234,8 +232,8 @@ int main( int argc, char *argv[] ) {
         cudaDeviceSynchronize();  // Wait for compute device to finish.
 
     //COPY RESULTS FROM GPU TO CPU TO CALCULATE RESIDUAL
-    cudaMemcpy(dev_u, param.u, sizeof(double)*(np*np),cudaMemcpyDeviceToHost);
-    cudaMemcpy(dev_uhelp, param.uhelp, sizeof(double)*(np*np),cudaMemcpyDeviceToHost);
+    cudaMemcpy(dev_u, param.u, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
+    cudaMemcpy(dev_uhelp, param.uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
 	residual = cpu_residual (param.u, param.uhelp, np, np);
 
 	float * tmp = dev_u;
@@ -252,8 +250,8 @@ int main( int argc, char *argv[] ) {
     }
 
     // TODO: get result matrix from GPU
-    cudaMemcpy(dev_u, param.u, sizeof(double)*(np*np),cudaMemcpyDeviceToHost);
-    cudaMemcpy(dev_uhelp, param.uhelp, sizeof(double)*(np*np),cudaMemcpyDeviceToHost);
+    cudaMemcpy(dev_u, param.u, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
+    cudaMemcpy(dev_uhelp, param.uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
 
     // TODO: free memory used in GPU
     cudaFree(dev_u);
