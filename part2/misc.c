@@ -15,7 +15,7 @@
 #include <math.h>
 #include <float.h>
 #include <sys/time.h>
-
+#include <omp.h>
 #include "heat.h"
 
 /*
@@ -46,11 +46,12 @@ int initialize( algoparam_t *param )
 	fprintf(stderr, "Error: Cannot allocate memory\n");
 	return 0;
     }
-
+    
     for( i=0; i<param->numsrcs; i++ )
     {
 	/* top row */
-	for( j=0; j<np; j++ )
+	#pragma omp parallel for private(j, dist)
+    for( j=0; j<np; j++ )
 	{
 	    dist = sqrt( pow((double)j/(double)(np-1) - 
 			     param->heatsrcs[i].posx, 2)+
@@ -66,6 +67,7 @@ int initialize( algoparam_t *param )
 	}
       
 	/* bottom row */
+    #pragma omp parallel for private(j, dist)
 	for( j=0; j<np; j++ )
 	{
 	    dist = sqrt( pow((double)j/(double)(np-1) - 
@@ -82,6 +84,7 @@ int initialize( algoparam_t *param )
 	}
       
 	/* leftmost column */
+    #pragma omp parallel for private(j, dist)
 	for( j=1; j<np-1; j++ )
 	{
 	    dist = sqrt( pow(param->heatsrcs[i].posx, 2)+
@@ -98,6 +101,7 @@ int initialize( algoparam_t *param )
 	}
       
 	/* rightmost column */
+    #pragma omp parallel for private(j, dist)
 	for( j=1; j<np-1; j++ )
 	{
 	    dist = sqrt( pow(1-param->heatsrcs[i].posx, 2)+
@@ -115,12 +119,15 @@ int initialize( algoparam_t *param )
     }
 
     // Copy u into uhelp
-    double *putmp, *pu;
-    pu = param->u;
-    putmp = param->uhelp;
-    for( int j=0; j<np; j++ )
-	for( int i=0; i<np; i++ )
-	    *putmp++ = *pu++;
+    #pragma omp parallel for
+    for(int j=0; j<np; j++) {
+        double *pu = param->u + j*np;
+        double *putmp = param->uhelp + j*np;
+        for(int i=0; i<np; i++) {
+            *putmp++ = *pu++;
+    }
+}
+
 
     return 1;
 }
@@ -190,15 +197,27 @@ void write_image( FILE * f, double *u,
     max=-DBL_MAX;
 
     // find minimum and maximum 
-    for( i=0; i<sizey; i++ )
+    double local_min, local_max;
+    #pragma omp parallel private(local_min, local_max, i, j) shared(min, max)
     {
-	for( j=0; j<sizex; j++ )
-	{
-	    if( u[i*sizex+j]>max )
-		max=u[i*sizex+j];
-	    if( u[i*sizex+j]<min )
-		min=u[i*sizex+j];
-	}
+        local_min = DBL_MAX;
+        local_max = -DBL_MAX;
+
+        #pragma omp for
+        for(i=0; i<sizey; i++) {
+            for(j=0; j<sizex; j++) {
+                if(u[i*sizex+j] > local_max)
+                    local_max = u[i*sizex+j];
+                if(u[i*sizex+j] < local_min)
+                    local_min = u[i*sizex+j];
+            }
+        }
+
+        #pragma omp critical
+        {
+            if(local_max > max) max = local_max;
+            if(local_min < min) min = local_min;
+        }
     }
   
 
@@ -310,7 +329,7 @@ void print_params( algoparam_t *param )
   fprintf(stdout, "Resolution        : %u\n", param->resolution);
   fprintf(stdout, "Algorithm         : %d (%s)\n",
 	  param->algorithm,
-	  (param->algorithm == 0) ? "Jacobi":(param->algorithm ==1) ? "Red-Black":(param->algorithm == 2) ? "Gauss-Seidel": "Gauss-Seidel do-across");
+	  (param->algorithm == 0) ? "Jacobi":(param->algorithm ==1) ? "Red-Black":"Gauss-Seidel" );
   fprintf(stdout, "Num. Heat sources : %u\n", param->numsrcs);
 
   for( i=0; i<param->numsrcs; i++ )
@@ -335,4 +354,3 @@ double wtime()
 
   return tv.tv_sec+1e-6*tv.tv_usec;
 }
-
