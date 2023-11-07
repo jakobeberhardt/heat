@@ -266,6 +266,8 @@ int main( int argc, char *argv[] ) {
         // max. iteration reached ? (no limit with maxiter=0)
         if (iter>=param.maxiter) break;
         cudaMemset(dev_residual,0,sizeof(float));
+        cudaDeviceSynchronize();
+        
     }
 
     // TODO: get result matrix from GPU

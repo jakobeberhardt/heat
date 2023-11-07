@@ -66,7 +66,6 @@ __global__ void gpu_Residual(float *u, float *utmp,float *dev_diff, float *resid
         dev_diff[diff_index] = utmp[index] - u[index];
         residuals[diff_index]=dev_diff[diff_index]*dev_diff[diff_index];
 }
-
 }
 
 __global__ void Kernel07(float *g_idata, float *g_odata, int N) {
