@@ -211,6 +211,12 @@ int main( int argc, char *argv[] ) {
 
     dim3 Grid(Grid_Dim, Grid_Dim);
     dim3 Block(Block_Dim, Block_Dim);
+
+    int num_threads = 256;
+    int block_dim = sqrt(((np-2)*(np-2))/num_threads);
+    int grid_dim = (np-2)/block_dim;
+    dim3 Grids =(grid_dim,grid_dim);
+    dim3 Blocks =(block_dim,block_dim);
     
     // starting time
     cudaEventRecord( start, 0 );
@@ -223,7 +229,7 @@ int main( int argc, char *argv[] ) {
 
     cudaMalloc((void**)&dev_u, sizeof(float)*(np*np));
     cudaMalloc((void**)&dev_residuals_first, sizeof(float)*((np-2)*(np-2)));
-    cudaMalloc((void**)&dev_residuals_second, sizeof(float)*(Grid));
+    cudaMalloc((void**)&dev_residuals_second, sizeof(float)*(grid_dim));
     cudaMalloc((void**)&dev_diff, sizeof(float)*((np-2)*(np-2)));
     cudaMalloc((void**)&dev_uhelp, sizeof(float)*(np*np));
     cudaMalloc((void**)&dev_residual, sizeof(float));
@@ -242,11 +248,6 @@ int main( int argc, char *argv[] ) {
         cudaMemset(dev_residual,0,sizeof(float));
         cudaDeviceSynchronize(); 
 
-        int num_threads = 256;
-        int block_dim = sqrt(((np-2)*(np-2))/num_threads);
-        int grid_dim = (np-2)/block_dim;
-        dim3 Grids =(grid_dim,grid_dim);
-        dim3 Blocks =(block_dim,block_dim);
         
 
         gpu_Heat<<<Grid,Block>>>(dev_u, dev_uhelp, np);
