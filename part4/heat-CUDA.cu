@@ -38,6 +38,7 @@ int coarsen(float *uold, unsigned oldx, unsigned oldy ,
 
 __global__ void gpu_Heat (float *h, float *g, int N);
 __global__ void gpu_Residual(float *u, float *utmp, float *residual, int N);
+__global__ void Kernel07(float *u,float* u_help, float *residual, int N) 
 
 #define NB 8
 #define min(a,b) ( ((a) < (b)) ? (a) : (b) )
@@ -237,7 +238,7 @@ int main( int argc, char *argv[] ) {
     //COPY RESULTS FROM GPU TO CPU TO CALCULATE RESIDUAL
     //cudaMemcpy(param.u, dev_u, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
     //cudaMemcpy(param.uhelp, dev_uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
-    gpu_Residual<<Grid,Block>>(dev_u,dev_uhelp,dev_residual,np);
+        Kernel07<<<Grid,Block>>>(dev_u,dev_uhelp,dev_residual,np);
     
 
 	//residual = cpu_residual (param.u, param.uhelp, np, np);
@@ -247,7 +248,7 @@ int main( int argc, char *argv[] ) {
         // Handle the error, possibly clean up any allocations, and exit
     }
 
-    cudaMemcpy(h_residual, dev_residual, sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&h_residual, dev_residual, sizeof(float), cudaMemcpyDeviceToHost);
 
 	// float * tmp = dev_u;
 	// dev_u = dev_uhelp;
