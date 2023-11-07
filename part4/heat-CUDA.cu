@@ -38,7 +38,7 @@ int coarsen(float *uold, unsigned oldx, unsigned oldy ,
 
 __global__ void gpu_Heat (float *h, float *g, int N);
 __global__ void gpu_Residual(float *u, float *utmp, float *residual, int N);
-__global__ void Kernel07(float *u,float* u_help, float *residual, int N);
+__global__ void Kernel07(float *u,float* u_help, float *residual,float* diff, int N);
 
 #define NB 8
 #define min(a,b) ( ((a) < (b)) ? (a) : (b) )
@@ -215,7 +215,7 @@ int main( int argc, char *argv[] ) {
     cudaEventRecord( start, 0 );
     cudaEventSynchronize( start );
 
-    float *dev_u, *dev_uhelp, *dev_residual, h_residual;
+    float *dev_u, *dev_uhelp, *dev_residual,*dev_diff, h_residual;
 
     //CUDA MEMORY ALLOCATION
 
@@ -272,7 +272,7 @@ int main( int argc, char *argv[] ) {
     cudaFree(dev_u);
     cudaFree(dev_uhelp);
     cudaFree(dev_residual);
-    cudaFree(diff);
+    cudaFree(dev_diff);
 
     cudaEventRecord( stop, 0 );     // instrument code to measue end time
     cudaEventSynchronize( stop );
