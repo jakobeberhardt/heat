@@ -223,7 +223,7 @@ int main( int argc, char *argv[] ) {
 
     cudaMalloc((void**)&dev_u, sizeof(float)*(np*np));
     cudaMalloc((void**)&dev_residuals_first, sizeof(float)*((np-2)*(np-2)));
-    cudaMalloc((void**)&dev_residuals_second, sizeof(float)*(Grid_Dim-1));
+    cudaMalloc((void**)&dev_residuals_second, sizeof(float)*(Grid));
     cudaMalloc((void**)&dev_diff, sizeof(float)*((np-2)*(np-2)));
     cudaMalloc((void**)&dev_uhelp, sizeof(float)*(np*np));
     cudaMalloc((void**)&dev_residual, sizeof(float));
@@ -242,6 +242,13 @@ int main( int argc, char *argv[] ) {
         cudaMemset(dev_residual,0,sizeof(float));
         cudaDeviceSynchronize(); 
 
+        int num_threads = 256;
+        int block_dim = sqrt(((np-2)*(np-2))/num_threads);
+        int grid_dim = (np-2)/block_dim;
+        dim3 Grids =(grid_dim,grid_dim);
+        dim3 Blocks =(block_dim,block_dim);
+        
+
         gpu_Heat<<<Grid,Block>>>(dev_u, dev_uhelp, np);
         cudaDeviceSynchronize();  // Wait for compute device to finish.
 
@@ -250,8 +257,8 @@ int main( int argc, char *argv[] ) {
     //cudaMemcpy(param.uhelp, dev_uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
         gpu_Residual<<<Grid,Block>>>(dev_u,dev_uhelp,dev_diff,dev_residuals_first,np);
         cudaDeviceSynchronize();
-        Kernel07<<<Grid,Block>>>(dev_residuals_first,dev_residuals_second,(np-2)*(np-2));
-        Kernel07<<<1, Grid_Dim, (Grid_Dim-1) * sizeof(float)>>>(dev_residuals_second,dev_residual,Grid_Dim-1);
+        Kernel07<<<Grids,Blocks>>>(dev_residuals_first,dev_residuals_second,(np-2)*(np-2));
+        finalReduceKernel<<<1, Grids>>>(dev_residuals_second,dev_residual,grid_dim);
 
     
 
