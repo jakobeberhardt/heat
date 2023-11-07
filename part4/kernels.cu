@@ -61,9 +61,14 @@ __global__ void gpu_Residual(float *u, float *utmp, float *diff, int N){
   unsigned int jj = blockIdx.y * blockDim.y + threadIdx.y;
   unsigned int index = ii * N + jj;
 
-    if (ii > 0 && ii < N - 1 && jj > 0 && jj < N - 1) {
-        diff[index] = utmp[index] - u[index];
+int interiorIndex = 0;
+for (int ii = 1; ii < N - 1; ++ii) {
+    for (int jj = 1; jj < N - 1; ++jj) {
+        int index = ii * N + jj; // Index in the original N*N array
+        diff[interiorIndex] = utmp[index] - u[index];
+        ++interiorIndex;
     }
+}
 
 }
 
