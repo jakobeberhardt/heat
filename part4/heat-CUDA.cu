@@ -220,7 +220,7 @@ int main( int argc, char *argv[] ) {
     //CUDA MEMORY ALLOCATION
 
     cudaMalloc((void**)&dev_u, sizeof(float)*(np*np));
-    cudaMalloc((void**)&dev_diff, sizeof(float)*(np*np));
+    cudaMalloc((void**)&dev_diff, sizeof(float)*((np-2)*(np-2)));
     cudaMalloc((void**)&dev_uhelp, sizeof(float)*(np*np));
     cudaMalloc((void**)&dev_residual, sizeof(float));
 
@@ -240,7 +240,7 @@ int main( int argc, char *argv[] ) {
     //cudaMemcpy(param.uhelp, dev_uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
         gpu_Residual<<<Grid,Block>>>(dev_u,dev_uhelp,dev_diff,np);
         cudaDeviceSynchronize();
-        Kernel07<<<Grid,Block>>>(dev_diff,dev_residual,(np*np));
+        Kernel07<<<Grid,Block>>>(dev_diff,dev_residual,(np-2)*(np-2));
     
 
 	//residual = cpu_residual (param.u, param.uhelp, np, np);
