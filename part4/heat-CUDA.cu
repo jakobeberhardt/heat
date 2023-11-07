@@ -215,7 +215,7 @@ int main( int argc, char *argv[] ) {
     cudaEventRecord( start, 0 );
     cudaEventSynchronize( start );
 
-    float *dev_u, *dev_uhelp, *dev_residuals,*dev_residual, h_residual;
+    float *dev_u, *dev_uhelp, *dev_residuals,*dev_residual,*dev_diff, h_residual;
 
     //CUDA MEMORY ALLOCATION
 
@@ -265,6 +265,7 @@ int main( int argc, char *argv[] ) {
 
         // max. iteration reached ? (no limit with maxiter=0)
         if (iter>=param.maxiter) break;
+        cudaMemset(dev_residual,0,sizeof(float));
     }
 
     // TODO: get result matrix from GPU

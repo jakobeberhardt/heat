@@ -60,12 +60,13 @@ __global__ void gpu_Residual(float *u, float *utmp,float *dev_diff, float *resid
   unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
   unsigned int j = blockIdx.y * blockDim.y + threadIdx.y;
   unsigned int index = i * N + j;
-  unsigned int diff_index = (i-1)*(N-2)+j-1
+  unsigned int diff_index = (i-1)*(N-2)+j-1;
   float diff = 0.0;
     if (i > 0 && i < N - 1 && j > 0 && j < N - 1) {
         dev_diff[diff_index] = utmp[index] - u[index];
-        residuals[diff_index]=dev_diff[diff_index]*diff[diff_index];
+        residuals[diff_index]=dev_diff[diff_index]*dev_diff[diff_index];
 }
+
 }
 
 __global__ void Kernel07(float *g_idata, float *g_odata, int N) {
