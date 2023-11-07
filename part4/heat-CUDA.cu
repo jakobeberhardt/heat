@@ -232,8 +232,12 @@ int main( int argc, char *argv[] ) {
     cudaMemcpy(dev_u, param.u, sizeof(float)*(np*np),cudaMemcpyHostToDevice);
     cudaMemcpy(dev_uhelp, param.uhelp, sizeof(float)*(np*np),cudaMemcpyHostToDevice);
 
+
+
     iter = 0;
     while(1) {
+        
+        cudaMemset(dev_residual,0,sizeof(float));
         gpu_Heat<<<Grid,Block>>>(dev_u, dev_uhelp, np);
         cudaDeviceSynchronize();  // Wait for compute device to finish.
 
@@ -265,8 +269,7 @@ int main( int argc, char *argv[] ) {
 
         // max. iteration reached ? (no limit with maxiter=0)
         if (iter>=param.maxiter) break;
-        cudaMemset(dev_residual,0,sizeof(float));
-        cudaDeviceSynchronize();
+
         
     }
 
