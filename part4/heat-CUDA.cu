@@ -37,6 +37,7 @@ int coarsen(float *uold, unsigned oldx, unsigned oldy ,
 
 
 __global__ void gpu_Heat (float *h, float *g, int N);
+__global__ void gpu_Residual(float *u, float *utmp, float *residual, int N);
 
 #define NB 8
 #define min(a,b) ( ((a) < (b)) ? (a) : (b) )
@@ -213,18 +214,20 @@ int main( int argc, char *argv[] ) {
     cudaEventRecord( start, 0 );
     cudaEventSynchronize( start );
 
-    float *dev_u, *dev_uhelp;
+    float *dev_u, *dev_uhelp, *dev_residual, *residual;
 
     //CUDA MEMORY ALLOCATION
 
     cudaMalloc((void**)&dev_u, sizeof(float)*(np*np));
     cudaMalloc((void**)&dev_uhelp, sizeof(float)*(np*np));
+    cudaMalloc((void**)&dev_residual, numBlocks.x * numBlocks.y * sizeof(float));
 
 
     //COPYING INITIAL VALUES FROM HOST TO DEVICE
 
     cudaMemcpy(dev_u, param.u, sizeof(float)*(np*np),cudaMemcpyHostToDevice);
     cudaMemcpy(dev_uhelp, param.uhelp, sizeof(float)*(np*np),cudaMemcpyHostToDevice);
+    size_t sharedMem = Block_Dim*Block_Dim;
 
     iter = 0;
     while(1) {
@@ -232,13 +235,23 @@ int main( int argc, char *argv[] ) {
         cudaDeviceSynchronize();  // Wait for compute device to finish.
 
     //COPY RESULTS FROM GPU TO CPU TO CALCULATE RESIDUAL
-    cudaMemcpy(param.u, dev_u, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
-    cudaMemcpy(param.u, dev_uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
-	residual = cpu_residual (param.u, param.uhelp, np, np);
+    //cudaMemcpy(param.u, dev_u, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
+    //cudaMemcpy(param.uhelp, dev_uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
+    gpu_Residual<<Grid,Block,sharedMem>>(dev_u,dev-uhelp,dev_residual,np);
+    cudaMemcpy(residual, dev_residual, N * sizeof(float), cudaMemcpyDeviceToHost);
 
-	float * tmp = dev_u;
-	dev_u = dev_uhelp;
-	dev_uhelp = tmp;
+	//residual = cpu_residual (param.u, param.uhelp, np, np);
+    cudaError_t error = cudaGetLastError();
+    if(error != cudaSuccess) {
+        fprintf(stderr, "CUDA Error: %s\n", cudaGetErrorString(error));
+        // Handle the error, possibly clean up any allocations, and exit
+    }
+
+    cudaMemcpy(residual, dev_residual, N * sizeof(float), cudaMemcpyDeviceToHost);
+
+	// float * tmp = dev_u;
+	// dev_u = dev_uhelp;
+	// dev_uhelp = tmp;
 
         iter++;
 
@@ -256,6 +269,7 @@ int main( int argc, char *argv[] ) {
     // TODO: free memory used in GPU
     cudaFree(dev_u);
     cudaFree(dev_uhelp);
+    cudaFree(dev_residual);
 
     cudaEventRecord( stop, 0 );     // instrument code to measue end time
     cudaEventSynchronize( stop );

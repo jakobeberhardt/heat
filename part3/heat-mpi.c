@@ -120,6 +120,7 @@ void do_calculations_master_nonblocking(algoparam_t *param, int rows, int np, in
     int ghost_rows = rows + 2;
     int block_size = (np) / numprocs;
     int send_tag = rank * numprocs + (rank + 1);
+    int tag_mult = 1000;
 
     MPI_Status statuses [numprocs];
     MPI_Request r_master[numprocs];
@@ -141,6 +142,7 @@ void do_calculations_master_nonblocking(algoparam_t *param, int rows, int np, in
             case 2: // GAUSS
                 residual = 0.0;
                 for (int i = 0; i < numprocs; i++) {
+                    int send_tag = (iter * tag_mult) + i; // Combine iteration number with loop index
                     residual += relax_gauss(param->u, ghost_rows, np, numprocs, i);
                     MPI_Isend(&param->u[(rows * np) + (i * block_size + 1)], block_size, MPI_DOUBLE, rank + 1, send_tag, MPI_COMM_WORLD,&r_master[i]);
                     //MPI_Wait(&r_master[i],&statuses[i]);   
@@ -154,8 +156,8 @@ void do_calculations_master_nonblocking(algoparam_t *param, int rows, int np, in
             exchange_ghosts_jacobi(param->u, np, rows, rank, numprocs);
         }
         if (algorithm == 2){
-        MPI_Barrier(MPI_COMM_WORLD);
         MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
         MPI_Recv(&param->u[(rows + 1) * np], np, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &statuses[0]);
         }
         // Solution good enough?
@@ -178,6 +180,7 @@ void do_calculations_worker_nonblocking(double *u, double *uhelp, int rank, int 
     int flag;
     int recv_tag = (rank - 1) * numprocs + rank;
     int send_tag = rank * numprocs + (rank + 1);
+    int tag_mult = 1000;
 
     while (1) {
         switch (algorithm) {
@@ -196,15 +199,17 @@ void do_calculations_worker_nonblocking(double *u, double *uhelp, int rank, int 
             case 2: // GAUSS
                 residual = 0.0;
                 for (int i = 0; i < numprocs; i++) {
+                    int send_tag = (iter * tag_mult) + i; // Combine iteration number with loop index
+                    int recv_tag = (iter * tag_mult) + i;
+                    
                     MPI_Irecv(&u[i * block_size + 1], block_size, MPI_DOUBLE, rank - 1, recv_tag, MPI_COMM_WORLD, &r_recv[i]);
-                    //MPI_Wait(&r_recv[i],&statuses[i]);
-                    //MPI_Test(&r_recv[i],&flag,&statuses[i]);
-                    //MPI_Barrier(MPI_COMM_WORLD);
+                    MPI_Wait(&r_recv[i],&statuses[0]);
                     residual += relax_gauss(u, ghost_rows, np, numprocs, i);
                     if (rank != numprocs - 1) {
                         MPI_Isend(&u[(rows * np) + (i * block_size + 1)], block_size, MPI_DOUBLE, rank + 1, send_tag, MPI_COMM_WORLD,&r_send[i]);
                         //MPI_Wait(&r_send[i],&statuses[i]);
                     }
+                    
                     
                 }
                 
@@ -217,13 +222,13 @@ void do_calculations_worker_nonblocking(double *u, double *uhelp, int rank, int 
         }
         iter++;
         if (algorithm == 2){
-        MPI_Barrier(MPI_COMM_WORLD);
         MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
         MPI_Send(&u[np], np, MPI_DOUBLE, rank - 1, 1, MPI_COMM_WORLD);
         if (rank != numprocs - 1) {
             MPI_Recv(&u[(rows + 1) * np], np, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &statuses[0]);
         }
-        } 
+        }
         // Solution good enough?
         if (global_residual < 0.00005) break;
 
@@ -373,7 +378,7 @@ int main(int argc, char *argv[]) {
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        do_calculations_master_nonblocking(&param, rows, np, myid, numprocs, param.algorithm);
+        do_calculations_master_blocking(&param, rows, np, myid, numprocs, param.algorithm);
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -433,7 +438,7 @@ int main(int argc, char *argv[]) {
         MPI_Barrier(MPI_COMM_WORLD);
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        do_calculations_worker_nonblocking(u, uhelp, myid, numprocs, rows, np, maxiter, algorithm);
+        do_calculations_worker_blocking(u, uhelp, myid, numprocs, rows, np, maxiter, algorithm);
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
