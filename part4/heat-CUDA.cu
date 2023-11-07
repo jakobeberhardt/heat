@@ -236,8 +236,10 @@ int main( int argc, char *argv[] ) {
 
     iter = 0;
     while(1) {
-        
+
         cudaMemset(dev_residual,0,sizeof(float));
+        cudaDeviceSynchronize(); 
+
         gpu_Heat<<<Grid,Block>>>(dev_u, dev_uhelp, np);
         cudaDeviceSynchronize();  // Wait for compute device to finish.
 
