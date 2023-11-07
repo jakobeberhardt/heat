@@ -229,7 +229,6 @@ int main( int argc, char *argv[] ) {
 
     cudaMemcpy(dev_u, param.u, sizeof(float)*(np*np),cudaMemcpyHostToDevice);
     cudaMemcpy(dev_uhelp, param.uhelp, sizeof(float)*(np*np),cudaMemcpyHostToDevice);
-    size_t sharedMem = Block_Dim*Block_Dim;
 
     iter = 0;
     while(1) {
@@ -239,7 +238,9 @@ int main( int argc, char *argv[] ) {
     //COPY RESULTS FROM GPU TO CPU TO CALCULATE RESIDUAL
     //cudaMemcpy(param.u, dev_u, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
     //cudaMemcpy(param.uhelp, dev_uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
-        Kernel07<<<Grid,Block>>>(dev_u,dev_uhelp,dev_residual,dev_diff,np);
+        gpu_Residual<<<Grid,Block>>>(dev_u,dev_uhelp,dev_diff,np);
+        cudaDeviceSynchronize();
+        gpu_Kernel07<<<Grid,Block>>>(dev_diff,dev_residual,np);
     
 
 	//residual = cpu_residual (param.u, param.uhelp, np, np);

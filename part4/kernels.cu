@@ -14,7 +14,7 @@ __global__ void gpu_Heat (float *h, float *g, int N) {
 	}
 }
 
-__global__ void gpu_Residual(float *u, float *utmp, float *residual, int N) {
+__global__ void gpu_residual(float *u, float *utmp, float *residual, int N) {
   // Calculate the thread's unique index
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -56,13 +56,7 @@ __global__ void gpu_Residual(float *u, float *utmp, float *residual, int N) {
     }
 }
 
-__global__ void Kernel07(float *u,float* utmp, float *residual,float *diff, int N) {
-  __shared__ float sdata[1024];
-  unsigned int s;
-
-  // Cada thread realiza la suma parcial de los datos que le
-  // corresponden y la deja en la memoria compartida
-  
+__global__ void gpu_Residual(float *u, float *utmp, float *diff, int N){
   unsigned int ii = blockIdx.x * blockDim.x + threadIdx.x;
   unsigned int jj = blockIdx.y * blockDim.y + threadIdx.y;
   unsigned int index = ii * N + jj;
@@ -70,15 +64,21 @@ __global__ void Kernel07(float *u,float* utmp, float *residual,float *diff, int 
     if (ii > 0 && ii < N - 1 && jj > 0 && jj < N - 1) {
         diff[index] = utmp[index] - u[index];
     }
-    sdata[threadIdx.y * blockDim.x + threadIdx.x] = diff[threadIdx.y * blockDim.x + threadIdx.x]*diff[threadIdx.y * blockDim.x + threadIdx.x];
 
+}
+
+__global__ void Kernel07(float *g_idata, float *g_odata, int N) {
+  __shared__ float sdata[1024];
+  unsigned int s;
+
+  // Cada thread realiza la suma parcial de los datos que le
+  // corresponden y la deja en la memoria compartida
+  unsigned int tid = threadIdx.x;
   unsigned int i = blockIdx.x*(blockDim.x*2) + threadIdx.x;
   unsigned int gridSize = blockDim.x*2*gridDim.x;
-  unsigned int tid = threadIdx.x;
-
-  
+  sdata[tid] = 0;
   while (i < N) {
-    sdata[tid] += sdata[i] + sdata[i+blockDim.x];
+    sdata[tid] += g_idata[i] + g_idata[i+blockDim.x];
     i += gridSize;
   }
   __syncthreads();
@@ -103,6 +103,6 @@ __global__ void Kernel07(float *u,float* utmp, float *residual,float *diff, int 
 
 
   // El thread 0 escribe el resultado de este bloque en la memoria global
-  if (tid == 0) residual[blockIdx.x] = sdata[0];
+  if (tid == 0) g_odata[blockIdx.x] = sdata[0];
 
 }
