@@ -215,7 +215,7 @@ int main( int argc, char *argv[] ) {
     cudaEventRecord( start, 0 );
     cudaEventSynchronize( start );
 
-    float *dev_u, *dev_uhelp, *dev_residual, *h_residual;
+    float *dev_u, *dev_uhelp, *dev_residual, h_residual;
 
     //CUDA MEMORY ALLOCATION
 

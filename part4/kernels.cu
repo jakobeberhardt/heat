@@ -58,6 +58,7 @@ __global__ void gpu_Residual(float *u, float *utmp, float *residual, int N) {
 
 __global__ void Kernel07(float *u,float* utmp, float *residual, int N) {
   __shared__ float sdata[1024];
+  float diff[N*N];
   unsigned int s;
 
   // Cada thread realiza la suma parcial de los datos que le
@@ -68,7 +69,7 @@ __global__ void Kernel07(float *u,float* utmp, float *residual, int N) {
   unsigned int index = ii * N + jj;
   float diff = 0.0;
     if (ii > 0 && ii < N - 1 && jj > 0 && jj < N - 1) {
-        diff = utmp[index] - u[index];
+        diff[index] = utmp[index] - u[index];
     }
     sdata[threadIdx.y * blockDim.x + threadIdx.x] = diff * diff;
 
