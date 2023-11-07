@@ -56,7 +56,7 @@ __global__ void gpu_Residual(float *u, float *utmp, float *residual, int N) {
     }
 }
 
-__global__ void Kernel07(float *u,float* utmp, float *residual, int N) {
+__global__ void Kernel07(float *u,float* utmp, float *residual,float *diff, int N) {
   __shared__ float sdata[1024];
   float diff[N*N];
   unsigned int s;

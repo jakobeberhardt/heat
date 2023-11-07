@@ -220,6 +220,7 @@ int main( int argc, char *argv[] ) {
     //CUDA MEMORY ALLOCATION
 
     cudaMalloc((void**)&dev_u, sizeof(float)*(np*np));
+    cudaMalloc((void**)&dev_diff, sizeof(float)*(np*np));
     cudaMalloc((void**)&dev_uhelp, sizeof(float)*(np*np));
     cudaMalloc((void**)&dev_residual, sizeof(float));
 
@@ -238,7 +239,7 @@ int main( int argc, char *argv[] ) {
     //COPY RESULTS FROM GPU TO CPU TO CALCULATE RESIDUAL
     //cudaMemcpy(param.u, dev_u, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
     //cudaMemcpy(param.uhelp, dev_uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
-        Kernel07<<<Grid,Block>>>(dev_u,dev_uhelp,dev_residual,np);
+        Kernel07<<<Grid,Block>>>(dev_u,dev_uhelp,dev_residual,dev_diff,np);
     
 
 	//residual = cpu_residual (param.u, param.uhelp, np, np);
@@ -271,6 +272,7 @@ int main( int argc, char *argv[] ) {
     cudaFree(dev_u);
     cudaFree(dev_uhelp);
     cudaFree(dev_residual);
+    cudaFree(diff);
 
     cudaEventRecord( stop, 0 );     // instrument code to measue end time
     cudaEventSynchronize( stop );
