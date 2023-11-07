@@ -37,7 +37,7 @@ int coarsen(float *uold, unsigned oldx, unsigned oldy ,
 
 
 __global__ void gpu_Heat (float *h, float *g, int N);
-__global__ void gpu_Residual(float *u, float *utmp, float *diff, int N);
+__global__ void gpu_Residual(float *u, float *utmp, float *residuals, int N);
 __global__ void Kernel07(float *g_idata, float *g_odata, int N);
 
 #define NB 8
@@ -215,12 +215,12 @@ int main( int argc, char *argv[] ) {
     cudaEventRecord( start, 0 );
     cudaEventSynchronize( start );
 
-    float *dev_u, *dev_uhelp, *dev_residual,*dev_diff, h_residual;
+    float *dev_u, *dev_uhelp, *dev_residual, h_residual;
 
     //CUDA MEMORY ALLOCATION
 
     cudaMalloc((void**)&dev_u, sizeof(float)*(np*np));
-    cudaMalloc((void**)&dev_diff, sizeof(float)*((np-2)*(np-2)));
+    cudaMalloc((void**)&dev_residuals, sizeof(float)*((np)*(np)));
     cudaMalloc((void**)&dev_uhelp, sizeof(float)*(np*np));
     cudaMalloc((void**)&dev_residual, sizeof(float));
 
@@ -240,7 +240,7 @@ int main( int argc, char *argv[] ) {
     //cudaMemcpy(param.uhelp, dev_uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
         gpu_Residual<<<Grid,Block>>>(dev_u,dev_uhelp,dev_diff,np);
         cudaDeviceSynchronize();
-        Kernel07<<<Grid,Block>>>(dev_diff,dev_residual,(np-2)*(np-2));
+        Kernel07<<<Grid,Block>>>(dev_residuals,dev_residual,np);
     
 
 	//residual = cpu_residual (param.u, param.uhelp, np, np);
@@ -252,9 +252,9 @@ int main( int argc, char *argv[] ) {
 
     cudaMemcpy(&h_residual, dev_residual, sizeof(float), cudaMemcpyDeviceToHost);
 
-	// float * tmp = dev_u;
-	// dev_u = dev_uhelp;
-	// dev_uhelp = tmp;
+	 float * tmp = dev_u;
+	 dev_u = dev_uhelp;
+	 dev_uhelp = tmp;
 
         iter++;
 

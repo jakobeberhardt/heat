@@ -56,19 +56,18 @@ __global__ void gpu_residual(float *u, float *utmp, float *residual, int N) {
     }
 }
 
-__global__ void gpu_Residual(float *u, float *utmp, float *diff, int N){
+__global__ void gpu_Residual(float *u, float *utmp, float *residuals, int N){
   unsigned int ii = blockIdx.x * blockDim.x + threadIdx.x;
   unsigned int jj = blockIdx.y * blockDim.y + threadIdx.y;
   unsigned int index = ii * N + jj;
-
-int interiorIndex = 0;
-for (int ii = 1; ii < N - 1; ++ii) {
-    for (int jj = 1; jj < N - 1; ++jj) {
-        int index = ii * N + jj; // Index in the original N*N array
-        diff[interiorIndex] = utmp[index] - u[index];
-        ++interiorIndex;
+  float diff = 0.0;
+    if (i > 0 && i < N - 1 && j > 0 && j < N - 1) {
+        diff = utmp[index] - u[index];
+        residuals[index]=diff*diff;
+    } else {
+        residuals[index]= 0 ;
     }
-}
+
 
 }
 
