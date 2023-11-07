@@ -18,8 +18,8 @@ typedef struct {
 
     unsigned visres;        // visualization resolution
   
-    float *u, *uhelp;
-    float *uvis;
+    double *u, *uhelp;
+    double *uvis;
 
     unsigned   numsrcs;     // number of heat sources
     heatsrc_t *heatsrcs;
@@ -30,23 +30,23 @@ int read_input( FILE *infile, algoparam_t *param );
 void print_params( algoparam_t *param );
 int initialize( algoparam_t *param );
 int finalize( algoparam_t *param );
-void write_image( FILE * f, float *u,
+void write_image( FILE * f, double *u,
 		  unsigned sizex, unsigned sizey );
-int coarsen(float *uold, unsigned oldx, unsigned oldy ,
-	    float *unew, unsigned newx, unsigned newy );
+int coarsen(double *uold, unsigned oldx, unsigned oldy ,
+	    double *unew, unsigned newx, unsigned newy );
 
 
-__global__ void gpu_Heat (float *h, float *g, int N);
-__global__ void gpu_Residual(float *u, float *utmp,float *dev_diff ,float *residuals, int N);
-__global__ void Kernel07(float *g_idata, float *g_odata, int N);
-__global__ void finalReduceKernel(float *g_idata, float *g_odata, int N);
+__global__ void gpu_Heat (double *h, double *g, int N);
+__global__ void gpu_Residual(double *u, double *utmp,double *dev_diff ,double *residuals, int N);
+__global__ void Kernel07(double *g_idata, double *g_odata, int N);
+__global__ void finalReduceKernel(double *g_idata, double *g_odata, int N);
 
 #define NB 8
 #define min(a,b) ( ((a) < (b)) ? (a) : (b) )
 
-float cpu_residual (float *u, float *utmp, unsigned sizex, unsigned sizey)
+double cpu_residual (double *u, double *utmp, unsigned sizex, unsigned sizey)
 {
-    float diff, sum=0.0;
+    double diff, sum=0.0;
   
     for (int i=1; i<sizex-1; i++) 
         for (int j=1; j<sizey-1; j++) {
@@ -56,9 +56,9 @@ float cpu_residual (float *u, float *utmp, unsigned sizex, unsigned sizey)
     return(sum);
 }
 
-float cpu_jacobi (float *u, float *utmp, unsigned sizex, unsigned sizey)
+double cpu_jacobi (double *u, double *utmp, unsigned sizex, unsigned sizey)
 {
-    float diff, sum=0.0;
+    double diff, sum=0.0;
     int nbx, bx, nby, by;
   
     nbx = NB;
@@ -168,10 +168,10 @@ int main( int argc, char *argv[] ) {
     cudaEventSynchronize( start );
 
     iter = 0;
-    float residual;
+    double residual;
     while(1) {
 	residual = cpu_jacobi(param.u, param.uhelp, np, np);
-	float * tmp = param.u;
+	double * tmp = param.u;
 	param.u = param.uhelp;
 	param.uhelp = tmp;
 
@@ -189,7 +189,7 @@ int main( int argc, char *argv[] ) {
     cudaEventElapsedTime( &elapsed_time_ms, start, stop );
 
     // Flop count after iter iterations
-    float flop = iter * 11.0 * param.resolution * param.resolution;
+    double flop = iter * 11.0 * param.resolution * param.resolution;
 
     fprintf(stdout, "Time on CPU in ms.= %f ", elapsed_time_ms);
     fprintf(stdout, "(%3.3f GFlop => %6.2f MFlop/s)\n", 
@@ -222,30 +222,30 @@ int main( int argc, char *argv[] ) {
     cudaEventRecord( start, 0 );
     cudaEventSynchronize( start );
 
-    float *dev_u, *dev_uhelp, *dev_residuals_first,*dev_residuals_second,*dev_residual,*dev_diff, h_residual;
+    double *dev_u, *dev_uhelp, *dev_residuals_first,*dev_residuals_second,*dev_residual,*dev_diff, h_residual;
 
     //CUDA MEMORY ALLOCATION
 
 
-    cudaMalloc((void**)&dev_u, sizeof(float)*(np*np));
-    cudaMalloc((void**)&dev_residuals_first, sizeof(float)*((np-2)*(np-2)));
-    cudaMalloc((void**)&dev_residuals_second, sizeof(float)*(grid_dim));
-    cudaMalloc((void**)&dev_diff, sizeof(float)*((np-2)*(np-2)));
-    cudaMalloc((void**)&dev_uhelp, sizeof(float)*(np*np));
-    cudaMalloc((void**)&dev_residual, sizeof(float));
+    cudaMalloc((void**)&dev_u, sizeof(double)*(np*np));
+    cudaMalloc((void**)&dev_residuals_first, sizeof(double)*((np-2)*(np-2)));
+    cudaMalloc((void**)&dev_residuals_second, sizeof(double)*(grid_dim));
+    cudaMalloc((void**)&dev_diff, sizeof(double)*((np-2)*(np-2)));
+    cudaMalloc((void**)&dev_uhelp, sizeof(double)*(np*np));
+    cudaMalloc((void**)&dev_residual, sizeof(double));
 
 
     //COPYING INITIAL VALUES FROM HOST TO DEVICE
 
-    cudaMemcpy(dev_u, param.u, sizeof(float)*(np*np),cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_uhelp, param.uhelp, sizeof(float)*(np*np),cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_u, param.u, sizeof(double)*(np*np),cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_uhelp, param.uhelp, sizeof(double)*(np*np),cudaMemcpyHostToDevice);
 
 
 
     iter = 0;
     while(1) {
 
-        cudaMemset(dev_residual,0,sizeof(float));
+        cudaMemset(dev_residual,0,sizeof(double));
         cudaDeviceSynchronize(); 
 
         
@@ -254,8 +254,8 @@ int main( int argc, char *argv[] ) {
         cudaDeviceSynchronize();  // Wait for compute device to finish.
 
     //COPY RESULTS FROM GPU TO CPU TO CALCULATE RESIDUAL
-    //cudaMemcpy(param.u, dev_u, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
-    //cudaMemcpy(param.uhelp, dev_uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
+    //cudaMemcpy(param.u, dev_u, sizeof(double)*(np*np),cudaMemcpyDeviceToHost);
+    //cudaMemcpy(param.uhelp, dev_uhelp, sizeof(double)*(np*np),cudaMemcpyDeviceToHost);
         gpu_Residual<<<Grid,Block>>>(dev_u,dev_uhelp,dev_diff,dev_residuals_first,np);
         cudaDeviceSynchronize();
         Kernel07<<<Grids,Blocks>>>(dev_residuals_first,dev_residuals_second,(np-2)*(np-2));
@@ -270,9 +270,9 @@ int main( int argc, char *argv[] ) {
         // Handle the error, possibly clean up any allocations, and exit
     }
 
-    cudaMemcpy(&h_residual, dev_residual, sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&h_residual, dev_residual, sizeof(double), cudaMemcpyDeviceToHost);
 
-	 float * tmp = dev_u;
+	 double * tmp = dev_u;
 	 dev_u = dev_uhelp;
 	 dev_uhelp = tmp;
 
@@ -288,8 +288,8 @@ int main( int argc, char *argv[] ) {
     }
 
     // TODO: get result matrix from GPU
-    cudaMemcpy(param.u, dev_u, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
-    //cudaMemcpy(dev_uhelp, param.uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
+    cudaMemcpy(param.u, dev_u, sizeof(double)*(np*np),cudaMemcpyDeviceToHost);
+    //cudaMemcpy(dev_uhelp, param.uhelp, sizeof(double)*(np*np),cudaMemcpyDeviceToHost);
 
     // TODO: free memory used in GPU
     cudaFree(dev_u);
@@ -335,7 +335,7 @@ int initialize( algoparam_t *param )
 
 {
     int i, j;
-    float dist;
+    double dist;
 
     // total number of points (including border)
     const int np = param->resolution + 2;
@@ -343,9 +343,9 @@ int initialize( algoparam_t *param )
     //
     // allocate memory
     //
-    (param->u)     = (float*)calloc( sizeof(float),np*np );
-    (param->uhelp) = (float*)calloc( sizeof(float),np*np );
-    (param->uvis)  = (float*)calloc( sizeof(float),
+    (param->u)     = (double*)calloc( sizeof(double),np*np );
+    (param->uhelp) = (double*)calloc( sizeof(double),np*np );
+    (param->uvis)  = (double*)calloc( sizeof(double),
 				      (param->visres+2) *
 				      (param->visres+2) );
   
@@ -361,7 +361,7 @@ int initialize( algoparam_t *param )
 	/* top row */
 	for( j=0; j<np; j++ )
 	{
-	    dist = sqrt( pow((float)j/(float)(np-1) - 
+	    dist = sqrt( pow((double)j/(double)(np-1) - 
 			     param->heatsrcs[i].posx, 2)+
 			 pow(param->heatsrcs[i].posy, 2));
 	  
@@ -377,7 +377,7 @@ int initialize( algoparam_t *param )
 	/* bottom row */
 	for( j=0; j<np; j++ )
 	{
-	    dist = sqrt( pow((float)j/(float)(np-1) - 
+	    dist = sqrt( pow((double)j/(double)(np-1) - 
 			     param->heatsrcs[i].posx, 2)+
 			 pow(1-param->heatsrcs[i].posy, 2));
 	  
@@ -394,7 +394,7 @@ int initialize( algoparam_t *param )
 	for( j=1; j<np-1; j++ )
 	{
 	    dist = sqrt( pow(param->heatsrcs[i].posx, 2)+
-			 pow((float)j/(float)(np-1) - 
+			 pow((double)j/(double)(np-1) - 
 			     param->heatsrcs[i].posy, 2)); 
 	  
 	    if( dist <= param->heatsrcs[i].range )
@@ -410,7 +410,7 @@ int initialize( algoparam_t *param )
 	for( j=1; j<np-1; j++ )
 	{
 	    dist = sqrt( pow(1-param->heatsrcs[i].posx, 2)+
-			 pow((float)j/(float)(np-1) - 
+			 pow((double)j/(double)(np-1) - 
 			     param->heatsrcs[i].posy, 2)); 
 	  
 	    if( dist <= param->heatsrcs[i].range )
@@ -424,7 +424,7 @@ int initialize( algoparam_t *param )
     }
 
     // Copy u into uhelp
-    float *putmp, *pu;
+    double *putmp, *pu;
     pu = param->u;
     putmp = param->uhelp;
     for( j=0; j<np; j++ )
@@ -462,14 +462,14 @@ int finalize( algoparam_t *param )
  * write the given temperature u matrix to rgb values
  * and write the resulting image to file f
  */
-void write_image( FILE * f, float *u,
+void write_image( FILE * f, double *u,
 		  unsigned sizex, unsigned sizey ) 
 {
     // RGB table
     unsigned char r[1024], g[1024], b[1024];
     int i, j, k;
   
-    float min, max;
+    double min, max;
 
     j=1023;
 
@@ -527,8 +527,8 @@ void write_image( FILE * f, float *u,
 }
 
 
-int coarsen( float *uold, unsigned oldx, unsigned oldy ,
-	     float *unew, unsigned newx, unsigned newy )
+int coarsen( double *uold, unsigned oldx, unsigned oldy ,
+	     double *unew, unsigned newx, unsigned newy )
 {
     int i, j;
 

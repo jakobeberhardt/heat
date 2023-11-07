@@ -2,7 +2,7 @@
 #include <float.h>
 #include <cuda.h>
 
-__global__ void gpu_Heat (float *h, float *g, int N) {
+__global__ void gpu_Heat (double *h, double *g, int N) {
 	int i = blockIdx.y* blockDim.y + threadIdx.y;
 	int j = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -14,17 +14,17 @@ __global__ void gpu_Heat (float *h, float *g, int N) {
 	}
 }
 
-__global__ void gpu_residual(float *u, float *utmp, float *residual, int N) {
+__global__ void gpu_residual(double *u, double *utmp, double *residual, int N) {
   // Calculate the thread's unique index
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int j = blockIdx.y * blockDim.y + threadIdx.y;
     unsigned int index = i * N + j;
 
     // Shared memory for in-block reduction
-    extern __shared__ float sdata[];
+    extern __shared__ double sdata[];
 
     // Each thread computes one element (if within the domain boundaries)
-    float diff = 0.0;
+    double diff = 0.0;
     if (i > 0 && i < N - 1 && j > 0 && j < N - 1) {
         diff = utmp[index] - u[index];
     }
@@ -41,7 +41,7 @@ __global__ void gpu_residual(float *u, float *utmp, float *residual, int N) {
 
     // Now that we are using 64 threads or less, we can assume that we are within a warp and no longer need to synchronize
     if (threadIdx.x < 32) {
-        volatile float* smem = sdata;
+        volatile double* smem = sdata;
         if (blockSize >=  64) { smem[threadIdx.x] += smem[threadIdx.x + 32]; }
         if (blockSize >=  32) { smem[threadIdx.x] += smem[threadIdx.x + 16]; }
         if (blockSize >=  16) { smem[threadIdx.x] += smem[threadIdx.x +  8]; }
@@ -56,7 +56,7 @@ __global__ void gpu_residual(float *u, float *utmp, float *residual, int N) {
     }
 }
 
-__global__ void gpu_Residual(float *u, float *utmp,float *dev_diff, float *residuals, int N){
+__global__ void gpu_Residual(double *u, double *utmp,double *dev_diff, double *residuals, int N){
   unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
   unsigned int j = blockIdx.y * blockDim.y + threadIdx.y;
   unsigned int index = i * N + j;
@@ -67,8 +67,8 @@ __global__ void gpu_Residual(float *u, float *utmp,float *dev_diff, float *resid
 }
 }
 
-__global__ void Kernel07(float *g_idata, float *g_odata, int N) {
-  __shared__ float sdata[1024];
+__global__ void Kernel07(double *g_idata, double *g_odata, int N) {
+  __shared__ double sdata[1024];
   unsigned int s;
 
   // Cada thread realiza la suma parcial de los datos que le
@@ -91,7 +91,7 @@ __global__ void Kernel07(float *g_idata, float *g_odata, int N) {
   }
   // desenrrollamos el ultimo warp activo
   if (tid < 32) {
-    volatile float *smem = sdata;
+    volatile double *smem = sdata;
 
     smem[tid] += smem[tid + 32];
     smem[tid] += smem[tid + 16];
@@ -107,8 +107,8 @@ __global__ void Kernel07(float *g_idata, float *g_odata, int N) {
 
 }
 
-__global__ void finalReduceKernel(float *g_idata, float *g_odata, int N) {
-    extern __shared__ float sdata[];
+__global__ void finalReduceKernel(double *g_idata, double *g_odata, int N) {
+    extern __shared__ double sdata[];
 
     unsigned int tid = threadIdx.x;
 
