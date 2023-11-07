@@ -62,16 +62,20 @@ __global__ void Kernel07(float *u,float* utmp, float *residual, int N) {
 
   // Cada thread realiza la suma parcial de los datos que le
   // corresponden y la deja en la memoria compartida
-  unsigned int tid = threadIdx.x;
-  unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-  unsigned int j = blockIdx.y * blockDim.y + threadIdx.y;
-  unsigned int index = i * N + j;
-  unsigned int gridSize = blockDim.x*2*gridDim.x;
+  
+  unsigned int ii = blockIdx.x * blockDim.x + threadIdx.x;
+  unsigned int jj = blockIdx.y * blockDim.y + threadIdx.y;
+  unsigned int index = ii * N + jj;
   float diff = 0.0;
-    if (i > 0 && i < N - 1 && j > 0 && j < N - 1) {
+    if (ii > 0 && ii < N - 1 && jj > 0 && jj < N - 1) {
         diff = utmp[index] - u[index];
     }
     sdata[threadIdx.y * blockDim.x + threadIdx.x] = diff * diff;
+
+  unsigned int i = blockIdx.x*(blockDim.x*2) + threadIdx.x;
+  unsigned int gridSize = blockDim.x*2*gridDim.x;
+  unsigned int tid = threadIdx.x;
+
   
   while (i < N) {
     sdata[tid] += sdata[i] + sdata[i+blockDim.x];
