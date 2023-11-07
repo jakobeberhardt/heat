@@ -39,6 +39,7 @@ int coarsen(float *uold, unsigned oldx, unsigned oldy ,
 __global__ void gpu_Heat (float *h, float *g, int N);
 __global__ void gpu_Residual(float *u, float *utmp,float *dev_diff ,float *residuals, int N);
 __global__ void Kernel07(float *g_idata, float *g_odata, int N);
+__global__ void finalReduceKernel(float *g_idata, float *g_odata, int N);
 
 #define NB 8
 #define min(a,b) ( ((a) < (b)) ? (a) : (b) )
@@ -215,13 +216,14 @@ int main( int argc, char *argv[] ) {
     cudaEventRecord( start, 0 );
     cudaEventSynchronize( start );
 
-    float *dev_u, *dev_uhelp, *dev_residuals,*dev_residual,*dev_diff, h_residual;
+    float *dev_u, *dev_uhelp, *dev_residuals_first,dev_residuals_second,*dev_residual,*dev_diff, h_residual;
 
     //CUDA MEMORY ALLOCATION
 
 
     cudaMalloc((void**)&dev_u, sizeof(float)*(np*np));
-    cudaMalloc((void**)&dev_residuals, sizeof(float)*((np-2)*(np-2)));
+    cudaMalloc((void**)&dev_residuals_first, sizeof(float)*((np-2)*(np-2)));
+    cudaMalloc((void**)&dev_residuals_second, sizeof(float)*(Grid_Dim-1));
     cudaMalloc((void**)&dev_diff, sizeof(float)*((np-2)*(np-2)));
     cudaMalloc((void**)&dev_uhelp, sizeof(float)*(np*np));
     cudaMalloc((void**)&dev_residual, sizeof(float));
@@ -248,7 +250,9 @@ int main( int argc, char *argv[] ) {
     //cudaMemcpy(param.uhelp, dev_uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
         gpu_Residual<<<Grid,Block>>>(dev_u,dev_uhelp,dev_diff,dev_residuals,np);
         cudaDeviceSynchronize();
-        Kernel07<<<Grid,Block>>>(dev_residuals,dev_residual,(np-2)*(np-2));
+        Kernel07<<<Grid,Block>>>(dev_residuals_first,dev_residual_second,(np-2)*(np-2));
+        Kernel07<<<Grid,Block>>>(dev_residuals_second,dev_residual,Grid_Dim-1);
+
     
 
 	//residual = cpu_residual (param.u, param.uhelp, np, np);
@@ -283,7 +287,8 @@ int main( int argc, char *argv[] ) {
     cudaFree(dev_u);
     cudaFree(dev_uhelp);
     cudaFree(dev_residual);
-    cudaFree(dev_residuals);
+    cudaFree(dev_residuals_first);
+    cudaFree(dev_residuals_second);
     cudaFree(dev_diff);
 
     cudaEventRecord( stop, 0 );     // instrument code to measue end time

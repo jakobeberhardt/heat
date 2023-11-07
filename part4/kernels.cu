@@ -61,7 +61,6 @@ __global__ void gpu_Residual(float *u, float *utmp,float *dev_diff, float *resid
   unsigned int j = blockIdx.y * blockDim.y + threadIdx.y;
   unsigned int index = i * N + j;
   unsigned int diff_index = (i-1)*(N-2)+j-1;
-  float diff = 0.0;
     if (i > 0 && i < N - 1 && j > 0 && j < N - 1) {
         dev_diff[diff_index] = utmp[index] - u[index];
         residuals[diff_index]=dev_diff[diff_index]*dev_diff[diff_index];
@@ -106,4 +105,25 @@ __global__ void Kernel07(float *g_idata, float *g_odata, int N) {
   // El thread 0 escribe el resultado de este bloque en la memoria global
   if (tid == 0) g_odata[blockIdx.x] = sdata[0];
 
+}
+
+__global__ void finalReduceKernel(float *g_idata, float *g_odata, int N) {
+    extern __shared__ float sdata[];
+
+    unsigned int tid = threadIdx.x;
+
+    // Load block sums from global memory to shared memory
+    sdata[tid] = (tid < N) ? g_idata[tid] : 0;
+    __syncthreads();
+
+    // Perform final reduction in shared memory
+    for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (tid < s) {
+            sdata[tid] += sdata[tid + s];
+        }
+        __syncthreads();
+    }
+
+    // Write the final result to global memory
+    if (tid == 0) g_odata[0] = sdata[0];
 }
