@@ -251,7 +251,7 @@ int main( int argc, char *argv[] ) {
         gpu_Residual<<<Grid,Block>>>(dev_u,dev_uhelp,dev_diff,dev_residuals_first,np);
         cudaDeviceSynchronize();
         Kernel07<<<Grid,Block>>>(dev_residuals_first,dev_residuals_second,(np-2)*(np-2));
-        Kernel07<<<Grid,Block>>>(dev_residuals_second,dev_residual,Grid_Dim-1);
+        Kernel07<<<1, Grid_Dim, (Grid_Dim-1) * sizeof(float)>>>(dev_residuals_second,dev_residual,Grid_Dim-1);
 
     
 
