@@ -214,13 +214,13 @@ int main( int argc, char *argv[] ) {
     cudaEventRecord( start, 0 );
     cudaEventSynchronize( start );
 
-    float *dev_u, *dev_uhelp, *dev_residual, *residual;
+    float *dev_u, *dev_uhelp, *dev_residual, *h_residual;
 
     //CUDA MEMORY ALLOCATION
 
     cudaMalloc((void**)&dev_u, sizeof(float)*(np*np));
     cudaMalloc((void**)&dev_uhelp, sizeof(float)*(np*np));
-    cudaMalloc((void**)&dev_residual, numBlocks.x * numBlocks.y * sizeof(float));
+    cudaMalloc((void**)&dev_residual, sizeof(float));
 
 
     //COPYING INITIAL VALUES FROM HOST TO DEVICE
@@ -237,8 +237,8 @@ int main( int argc, char *argv[] ) {
     //COPY RESULTS FROM GPU TO CPU TO CALCULATE RESIDUAL
     //cudaMemcpy(param.u, dev_u, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
     //cudaMemcpy(param.uhelp, dev_uhelp, sizeof(float)*(np*np),cudaMemcpyDeviceToHost);
-    gpu_Residual<<Grid,Block,sharedMem>>(dev_u,dev-uhelp,dev_residual,np);
-    cudaMemcpy(residual, dev_residual, N * sizeof(float), cudaMemcpyDeviceToHost);
+    gpu_Residual<<Grid,Block>>(dev_u,dev_uhelp,dev_residual,np);
+    
 
 	//residual = cpu_residual (param.u, param.uhelp, np, np);
     cudaError_t error = cudaGetLastError();
@@ -247,7 +247,7 @@ int main( int argc, char *argv[] ) {
         // Handle the error, possibly clean up any allocations, and exit
     }
 
-    cudaMemcpy(residual, dev_residual, N * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_residual, dev_residual, sizeof(float), cudaMemcpyDeviceToHost);
 
 	// float * tmp = dev_u;
 	// dev_u = dev_uhelp;
@@ -256,7 +256,7 @@ int main( int argc, char *argv[] ) {
         iter++;
 
         // solution good enough ?
-        if (residual < 0.00005) break;
+        if (h_residual < 0.00005) break;
 
         // max. iteration reached ? (no limit with maxiter=0)
         if (iter>=param.maxiter) break;
