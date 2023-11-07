@@ -57,7 +57,7 @@ __global__ void gpu_Residual(float *u, float *utmp, float *residual, int N) {
 }
 
 __global__ void Kernel07(float *u,float* utmp, float *residual, int N) {
-  __shared__ float sdata[N];
+  __shared__ float sdata[1024];
   unsigned int s;
 
   // Cada thread realiza la suma parcial de los datos que le
@@ -87,7 +87,7 @@ __global__ void Kernel07(float *u,float* utmp, float *residual, int N) {
   }
   // desenrrollamos el ultimo warp activo
   if (tid < 32) {
-    volatile double *smem = sdata;
+    volatile float *smem = sdata;
 
     smem[tid] += smem[tid + 32];
     smem[tid] += smem[tid + 16];
