@@ -38,7 +38,7 @@ int coarsen(float *uold, unsigned oldx, unsigned oldy ,
 
 __global__ void gpu_Heat (float *h, float *g, int N);
 __global__ void gpu_Residual(float *u, float *utmp, float *residual, int N);
-__global__ void Kernel07(float *u,float* u_help, float *residual, int N) 
+__global__ void Kernel07(float *u,float* u_help, float *residual, int N);
 
 #define NB 8
 #define min(a,b) ( ((a) < (b)) ? (a) : (b) )
