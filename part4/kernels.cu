@@ -56,14 +56,15 @@ __global__ void gpu_Residual(float *u, float *utmp, float *residual, int N) {
     }
 }
 
-__global__ void Kernel07(float *u,float* u_help, float *residual, int N) {
-  __shared__ double sdata[NumElem];
+__global__ void Kernel07(float *u,float* utmp, float *residual, int N) {
+  __shared__ double sdata[N];
   unsigned int s;
 
   // Cada thread realiza la suma parcial de los datos que le
   // corresponden y la deja en la memoria compartida
   unsigned int tid = threadIdx.x;
-  unsigned int i = blockIdx.x*(blockDim.x*2) + threadIdx.x;
+  unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+  unsigned int j = blockIdx.y * blockDim.y + threadIdx.y;
   unsigned int gridSize = blockDim.x*2*gridDim.x;
   float diff = 0.0;
     if (i > 0 && i < N - 1 && j > 0 && j < N - 1) {
@@ -72,7 +73,7 @@ __global__ void Kernel07(float *u,float* u_help, float *residual, int N) {
     sdata[threadIdx.y * blockDim.x + threadIdx.x] = diff * diff;
   
   while (i < N) {
-    sdata[tid] += g_idata[i] + g_idata[i+blockDim.x];
+    sdata[tid] += sdata[i] + sdata[i+blockDim.x];
     i += gridSize;
   }
   __syncthreads();
