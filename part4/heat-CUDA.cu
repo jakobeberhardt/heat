@@ -38,7 +38,7 @@ int coarsen(double *uold, unsigned oldx, unsigned oldy ,
 
 __global__ void gpu_Heat (double *h, double *g, int N);
 __global__ void gpu_Residual(double *u, double *utmp,double *dev_diff ,double *residuals, int N);
-__global__ void Kernel07(double *g_idata, double *g_odata, int N);
+__global__ void firstReduceKernel(double *g_idata, double *g_odata, int N);
 __global__ void finalReduceKernel(double *g_idata, double *g_odata, int N);
 
 #define NB 8
@@ -258,7 +258,7 @@ int main( int argc, char *argv[] ) {
     //cudaMemcpy(param.uhelp, dev_uhelp, sizeof(double)*(np*np),cudaMemcpyDeviceToHost);
         gpu_Residual<<<Grid,Block>>>(dev_u,dev_uhelp,dev_diff,dev_residuals_first,np);
         cudaDeviceSynchronize();
-        Kernel07<<<Grids,Blocks>>>(dev_residuals_first,dev_residuals_second,(np-2)*(np-2));
+        firstReduceKernel<<<Grids,Blocks>>>(dev_residuals_first,dev_residuals_second,(np-2)*(np-2));
         finalReduceKernel<<<1, Grids>>>(dev_residuals_second,dev_residual,grid_dim);
 
     
