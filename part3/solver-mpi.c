@@ -88,14 +88,15 @@ double relax_redblack (double *u, unsigned sizex, unsigned sizey)
 double relax_gauss (double *u, unsigned sizex, unsigned sizey,int numprocs, int iteration)
 {
     double unew, diff, sum=0.0;
-    int nbx, bx, nby, by, start,end;
+    int nbx, bx, nby, by, start,end,interval;
+    
+    interval = NB/numprocs;
+    start=iteration*interval;
+    end=(start +interval);
 
-    start=iteration;
-    end=start+1;
-
-    nbx = numprocs;
+    nbx = NB;
     bx = sizex/nbx;
-    nby = numprocs;
+    nby = NB;
     by = (sizey)/nby;
 
     for (int ii=0; ii<nbx; ii++)

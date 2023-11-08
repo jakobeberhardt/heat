@@ -1,5 +1,4 @@
 heatequation.pdf
-**/*.ppm
 **/.o
 **/heat
 **/Makefile
