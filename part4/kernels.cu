@@ -26,7 +26,7 @@ __global__ void gpu_Residual(double *u, double *utmp,double *dev_diff, double *r
 }
 }
 
-__global__ void Kernel07(double *g_idata, double *g_odata, int N) {
+__global__ void firstReduceKernel(double *g_idata, double *g_odata, int N) {
   __shared__ double sdata[1024];
   unsigned int s;
 
