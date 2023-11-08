@@ -11,22 +11,22 @@ void exchange_ghosts_jacobi(double *u, int np, int rows, int rank, int numprocs)
     MPI_Status status;
     MPI_Barrier(MPI_COMM_WORLD);
 
-    // Send to the next rank your last row only if you are not the last process
+    // Send to the next rank your last interior row, if you are not the last process.
     if (rank < numprocs - 1) {
         MPI_Send(&u[(rows) * np], np, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD);
     }
 
-    // Receive from the previous member their last row only if you are not the first process
+    // Receive from the previous member their last interior row, if you are not the first process.
     if (rank > 0) {
         MPI_Recv(u, np, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, &status);
     }
 
-    // Send the first row to the previous rank only if you are not rank 0
+    // Send the first row to the previous rank only if you are not rank 0.
     if (rank > 0) {
         MPI_Send(&u[np], np, MPI_DOUBLE, rank - 1, 1, MPI_COMM_WORLD);
     }
 
-    // Receive the first row from the next rank only if you are not the last rank
+    // Receive the first row from the next rank only if you are not the last rank.
     if (rank < numprocs - 1) {
         MPI_Recv(&u[(rows + 1) * np], np, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &status);
     }
